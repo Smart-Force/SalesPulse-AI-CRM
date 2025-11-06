@@ -15,17 +15,17 @@ const integrationsList = [
     description: "Receive real-time notifications for new leads, campaign replies, and important system alerts directly in your Slack channels.",
     icon: "https://cdn.worldvectorlogo.com/logos/slack-new-logo.svg",
   },
-  {
-    name: "LinkedIn",
-    category: "Social Selling",
-    description: "Streamline your outreach by connecting your LinkedIn account to copy messages and open profiles directly from campaigns.",
-    icon: "https://cdn.worldvectorlogo.com/logos/linkedin-icon-2.svg"
-  },
   { 
     name: "Google Calendar",
     category: "Productivity",
     description: "Automatically sync meetings scheduled through SalesPulse AI with your Google Calendar to avoid double-booking.",
     icon: "https://cdn.worldvectorlogo.com/logos/google-calendar.svg",
+  },
+  {
+    name: "LinkedIn",
+    category: "Social Selling",
+    description: "Streamline your outreach by connecting your LinkedIn account to copy messages and open profiles directly from campaigns.",
+    icon: "https://cdn.worldvectorlogo.com/logos/linkedin-icon-2.svg"
   },
   { 
     name: "Zapier",

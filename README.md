@@ -1,4 +1,5 @@
 
+
 # SalesPulse AI CRM
 
 **Supercharge your sales process with an intelligent, AI-powered CRM designed for the modern sales team.**
@@ -14,6 +15,7 @@ SalesPulse AI is a comprehensive CRM platform that leverages the power of the Go
 *   **🤖 AI Sales Enablement:** Instantly generate complete outreach plans for new leads, including talking points, recommended products, personalized emails, and a multi-touch LinkedIn message sequence.
 *   **👥 AI-Enriched Prospect Management:** Manage your contacts in a smart, centralized database. Enrich prospect profiles with a single click to get AI-powered insights on communication style, pain points, recent company news, and suggested next steps.
 *   **🎯 Multi-Channel Campaign Automation:** Build and launch sophisticated outreach sequences that blend multiple touchpoints, including **Emails**, **LinkedIn Messages**, **WhatsApp**, **Phone Calls**, and manual **Tasks**.
+*   **⚙️ Email Automation:** Create simple "if-this-then-that" rules to automatically send specific email templates when a prospect's status changes.
 *   **✍️ AI Content Generator & Personalization Engine:** Craft compelling sales copy for emails, subject lines, and follow-ups. Within campaigns, the AI dynamically personalizes email templates for each prospect using real-time web research.
 *   **📧 Integrated Email Inbox:** Manage your sales communications without leaving the app.
 *   **📊 Analytics & Reporting:** Dive deep into your sales data with detailed reports on performance, funnel conversion, and team leaderboards.

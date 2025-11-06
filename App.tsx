@@ -9,6 +9,7 @@ import { Analytics } from './components/Analytics';
 import { Integrations } from './components/Integrations';
 import { Settings } from './components/Settings';
 import { LeadGeneration } from './components/LeadGeneration';
+import { EmailAutomation } from './components/EmailAutomation';
 import type { View, Prospect } from './types';
 import { initialProspects } from './data/prospects';
 
@@ -46,6 +47,8 @@ function App() {
         return <Campaigns prospects={prospects} connectedIntegrations={connectedIntegrations} />;
       case 'email-inbox':
         return <EmailInbox />;
+      case 'email-automation':
+        return <EmailAutomation />;
       case 'ai-generator':
         return <AIGenerator />;
       case 'analytics':
