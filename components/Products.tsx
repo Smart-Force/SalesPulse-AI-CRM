@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
-import { Package, PlusCircle, Percent } from 'lucide-react';
+import { Package, PlusCircle, Percent, Edit, Trash2 } from 'lucide-react';
 import type { Product } from '../types';
+import AddProductModal from './modals/AddProductModal';
+
+type ProductFormData = Omit<Product, 'negotiatedCommissionRate' | 'discountRate'> & { id?: string };
 
 interface ProductsProps {
   products: Product[];
@@ -16,6 +19,8 @@ const formatCurrency = (amount: number) => {
 };
 
 export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
 
   const handleValueChange = (productId: string, field: 'negotiatedCommissionRate' | 'discountRate', value: string) => {
       const numericValue = parseFloat(value);
@@ -30,14 +35,60 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
       );
   };
 
+  const handleSaveProduct = (productData: ProductFormData) => {
+      const isUpdate = productData.id && products.some(p => p.id === productData.id);
+
+      if (isUpdate) {
+          setProducts(prevProducts =>
+              prevProducts.map(p => {
+                  if (p.id === productData.id) {
+                      return { 
+                          ...p, // keep old discountRate
+                          ...productData,
+                          negotiatedCommissionRate: productData.commissionRate // Reset negotiated rate to new base rate
+                      };
+                  }
+                  return p;
+              })
+          );
+      } else {
+          // Fix: Removed incorrect type assertion. The spread of productData is sufficient.
+          const newProduct: Product = {
+              ...productData,
+              id: `prod_${Date.now()}`,
+              negotiatedCommissionRate: productData.commissionRate,
+              discountRate: 0,
+          };
+          setProducts(prev => [newProduct, ...prev]);
+      }
+      setIsModalOpen(false);
+      setProductToEdit(null);
+  };
+
+  const handleOpenEditModal = (product: Product) => {
+      setProductToEdit(product);
+      setIsModalOpen(true);
+  };
+
+  const handleRemoveProduct = (productId: string) => {
+      if (window.confirm('Are you sure you want to remove this product? This action cannot be undone.')) {
+          setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+      }
+  };
+
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {isModalOpen && <AddProductModal 
+            onClose={() => { setIsModalOpen(false); setProductToEdit(null); }} 
+            onSaveProduct={handleSaveProduct} 
+            productToEdit={productToEdit} 
+        />}
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Deal Negotiator & Calculator</h1>
-                <p className="mt-1 text-gray-600 dark:text-slate-400">Adjust commission and discounts to calculate deal profitability in real-time.</p>
+                <p className="mt-1 text-gray-600 dark:text-slate-400">Add, edit, and remove products, then calculate deal profitability in real-time.</p>
             </div>
-            <button className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm">
+            <button onClick={() => { setProductToEdit(null); setIsModalOpen(true); }} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm">
                 <PlusCircle className="h-5 w-5 mr-2" />
                 Add Product
             </button>
@@ -64,6 +115,7 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
                                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Agent Commission</th>
                                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Sys. Rate</th>
                                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Customer Savings</th>
+                                <th scope="col" className="relative px-4 py-3"><span className="sr-only">Actions</span></th>
                             </tr>
                         </thead>
                         <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
@@ -98,7 +150,7 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
                                                 />
                                                 <Percent className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
                                             </div>
-                                            <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">{formatCurrency(product.basePrice * commissionRate)}</div>
+                                            <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">Base: {(product.commissionRate * 100).toFixed(0)}%</div>
                                         </td>
                                         <td className="px-4 py-3 align-top whitespace-nowrap text-sm font-bold text-gray-800 dark:text-slate-200">
                                             {formatCurrency(totalPrice)}
@@ -126,6 +178,16 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
                                         <td className="px-4 py-3 align-top whitespace-nowrap text-sm">
                                             <div className="font-medium text-green-600">{savingsPerBilling}</div>
                                             {totalAnnualSavings && <div className="text-xs text-gray-500 dark:text-slate-400">{totalAnnualSavings}</div>}
+                                        </td>
+                                        <td className="px-4 py-3 align-top whitespace-nowrap text-sm font-medium">
+                                            <div className="flex items-center space-x-2">
+                                                <button onClick={() => handleOpenEditModal(product)} className="p-2 text-gray-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700" title="Edit Product">
+                                                    <Edit className="h-4 w-4" />
+                                                </button>
+                                                <button onClick={() => handleRemoveProduct(product.id)} className="p-2 text-gray-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-500 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700" title="Remove Product">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );

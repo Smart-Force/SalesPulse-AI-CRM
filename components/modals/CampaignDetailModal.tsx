@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Save, Mail, Linkedin, Phone, Users, BarChart as BarChartIcon, Settings, ArrowRight, Clock, Trash2, Wand2, Loader2, Copy, ExternalLink, MessageSquare, Briefcase, GripVertical, Target, MousePointerClick, MessageSquareReply, Trophy } from 'lucide-react';
+import { X, Save, Mail, Linkedin, Phone, Users, BarChart as BarChartIcon, Settings, ArrowRight, Clock, Trash2, Wand2, Loader2, Copy, ExternalLink, MessageSquare, Briefcase, GripVertical, Target, MousePointerClick, MessageSquareReply, Trophy, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Campaign, CampaignStep, Prospect, Template, ProspectList } from '../../types';
 import { generatePersonalizedEmail } from '../../services/geminiService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -23,8 +23,13 @@ const DropZone = ({ onDrop }: { onDrop: (e: React.DragEvent) => void }) => {
     const [isDragOver, setIsDragOver] = useState(false);
     return (
         <div
+            onDragEnter={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+            }}
             onDragOver={(e) => {
                 e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
                 setIsDragOver(true);
             }}
             onDragLeave={() => setIsDragOver(false)}
@@ -33,8 +38,18 @@ const DropZone = ({ onDrop }: { onDrop: (e: React.DragEvent) => void }) => {
                 onDrop(e);
                 setIsDragOver(false);
             }}
-            className={`h-2 w-full rounded-full transition-colors my-1 ${isDragOver ? 'bg-blue-300 dark:bg-blue-800' : 'bg-transparent'}`}
-        />
+            className={`w-full rounded-lg transition-all duration-200 ${
+                isDragOver
+                ? 'h-16 py-3 bg-blue-100 dark:bg-blue-900/50 border-2 border-dashed border-blue-400'
+                : 'h-4 bg-transparent my-1'
+            }`}
+        >
+            {isDragOver && (
+                <div className="flex items-center justify-center h-full pointer-events-none">
+                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-300">Move step here</p>
+                </div>
+            )}
+        </div>
     )
 }
 
@@ -107,34 +122,39 @@ const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({ onClose, onSa
         onSave(editedCampaign);
     };
     
+    const handleMoveStep = (index: number, direction: 'up' | 'down') => {
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= editedCampaign.steps.length) return;
+
+        setEditedCampaign(prev => {
+            const steps = [...prev.steps];
+            const [movedItem] = steps.splice(index, 1);
+            steps.splice(newIndex, 0, movedItem);
+            return { ...prev, steps };
+        });
+    };
+
     // Drag and Drop Handlers
     const handleDragStart = (e: React.DragEvent, stepId: string) => {
-        e.dataTransfer.setData('stepId', stepId);
+        e.dataTransfer.setData('text/plain', stepId);
     };
 
     const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-        const draggedId = e.dataTransfer.getData('stepId');
+        const draggedId = e.dataTransfer.getData('text/plain');
         if (!draggedId) return;
 
         setEditedCampaign(prev => {
             const steps = [...prev.steps];
             const draggedIndex = steps.findIndex(s => s.id === draggedId);
-            if (draggedIndex === -1) {
-                return prev;
-            }
+            if (draggedIndex === -1) return prev;
             
-            // Remove the dragged item from the array
             const [removedItem] = steps.splice(draggedIndex, 1);
             
-            // If we are dragging an item from a lower index to a higher one,
-            // the removal of the item shifts the indices of all subsequent items down by one.
-            // Therefore, we must also decrement our target drop index to compensate.
             let targetIndex = dropIndex;
             if (draggedIndex < dropIndex) {
                 targetIndex = dropIndex - 1;
             }
             
-            // Insert the item at the new, corrected index
             steps.splice(targetIndex, 0, removedItem);
     
             return { ...prev, steps };
@@ -251,8 +271,8 @@ const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({ onClose, onSa
                                         <div
                                             draggable
                                             onDragStart={(e) => handleDragStart(e, step.id)}
-                                            className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border dark:border-slate-700 flex items-start gap-4 cursor-grab active:cursor-grabbing">
-                                            <div className="flex flex-col items-center pt-1">
+                                            className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border dark:border-slate-700 flex items-start gap-4">
+                                            <div className="flex flex-col items-center pt-1 cursor-grab active:cursor-grabbing">
                                                 <GripVertical className="h-5 w-5 text-gray-400 dark:text-slate-500"/>
                                             </div>
                                             <div className="flex flex-col items-center">
@@ -322,7 +342,28 @@ const CampaignDetailModal: React.FC<CampaignDetailModalProps> = ({ onClose, onSa
                                                     </div>
                                                 )}
                                             </div>
-                                            <button onClick={() => handleRemoveStep(step.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-5 w-5"/></button>
+                                            <div className="flex flex-col items-center space-y-1">
+                                                <button
+                                                    onClick={() => handleMoveStep(index, 'up')}
+                                                    disabled={index === 0}
+                                                    className="p-1.5 rounded-md text-gray-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    title="Move up"
+                                                >
+                                                    <ChevronUp className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleMoveStep(index, 'down')}
+                                                    disabled={index === editedCampaign.steps.length - 1}
+                                                    className="p-1.5 rounded-md text-gray-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    title="Move down"
+                                                >
+                                                    <ChevronDown className="h-4 w-4" />
+                                                </button>
+                                                <div className="w-full h-px bg-slate-200 dark:bg-slate-600 my-1"></div>
+                                                <button onClick={() => handleRemoveStep(step.id)} className="p-1.5 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/50" title="Remove step">
+                                                    <Trash2 className="h-4 w-4"/>
+                                                </button>
+                                            </div>
                                         </div>
                                         <DropZone onDrop={(e) => handleDrop(e, index + 1)} />
                                     </div>
