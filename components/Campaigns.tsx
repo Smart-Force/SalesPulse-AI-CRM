@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { PlusCircle, Target, Mail, Send, BarChart2, Edit, Trash2, Search, FileText } from 'lucide-react';
-import type { Campaign, Prospect, Template } from '../types';
+import type { Campaign, Prospect, Template, ProspectList } from '../types';
 import { CampaignWorkflow } from './CampaignWorkflow';
 import CreateCampaignModal from './modals/CreateCampaignModal';
 import CampaignDetailModal from './modals/CampaignDetailModal';
@@ -13,19 +13,20 @@ const initialCampaigns: Campaign[] = [
     { id: 's1', type: 'Email', templateId: 't1', delayDays: 0 },
     { id: 's2', type: 'Email', templateId: 't2', delayDays: 3 },
     { id: 's3', type: 'LinkedIn', message: 'Hi {{first_name}}, following up on my email. Would love to connect and share some insights on how we help companies like {{company}} with {{specific_pain_point}}.', delayDays: 2 },
-  ], prospectIds: ['1', '2', '3', '4'] },
+  ], prospectIds: ['1', '2'], prospectListIds: ['list2'] },
   { id: 'c2', name: 'Re-engagement Campaign', status: 'Draft', sent: 0, opens: 0, clicks: 0, replies: 0, createdDate: 'July 20, 2024', steps: [
      { id: 's4', type: 'Email', templateId: 't3', delayDays: 0 },
-  ], prospectIds: [] },
-  { id: 'c3', name: 'Webinar Follow-up', status: 'Completed', sent: 500, opens: 450, clicks: 150, replies: 80, createdDate: 'May 01, 2024', steps: [], prospectIds: [] },
+  ], prospectIds: [], prospectListIds: [] },
+  { id: 'c3', name: 'Webinar Follow-up', status: 'Completed', sent: 500, opens: 450, clicks: 150, replies: 80, createdDate: 'May 01, 2024', steps: [], prospectIds: [], prospectListIds: [] },
 ];
 
 interface CampaignsProps {
     prospects: Prospect[];
     connectedIntegrations: Set<string>;
+    prospectLists: ProspectList[];
 }
 
-export const Campaigns: React.FC<CampaignsProps> = ({ prospects, connectedIntegrations }) => {
+export const Campaigns: React.FC<CampaignsProps> = ({ prospects, connectedIntegrations, prospectLists }) => {
     const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
     const [templates, setTemplates] = useState<Template[]>(initialTemplates);
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
@@ -45,7 +46,7 @@ export const Campaigns: React.FC<CampaignsProps> = ({ prospects, connectedIntegr
             status: 'Draft',
             sent: 0, opens: 0, clicks: 0, replies: 0,
             createdDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-            steps: [], prospectIds: [],
+            steps: [], prospectIds: [], prospectListIds: [],
         };
         setCampaigns(prev => [newCampaign, ...prev]);
         setCreateModalOpen(false);
@@ -87,7 +88,7 @@ export const Campaigns: React.FC<CampaignsProps> = ({ prospects, connectedIntegr
     return (
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {isCreateModalOpen && <CreateCampaignModal onCreateCampaign={handleCreateCampaign} onClose={() => setCreateModalOpen(false)} />}
-            {viewingCampaign && <CampaignDetailModal campaign={viewingCampaign} prospects={prospects} templates={templates} onSave={handleSaveCampaign} onClose={() => setViewingCampaign(null)} connectedIntegrations={connectedIntegrations} />}
+            {viewingCampaign && <CampaignDetailModal campaign={viewingCampaign} prospects={prospects} templates={templates} onSave={handleSaveCampaign} onClose={() => setViewingCampaign(null)} connectedIntegrations={connectedIntegrations} prospectLists={prospectLists} />}
             {isTemplateEditorOpen && <TemplateEditorModal onSave={handleSaveTemplate} onClose={() => {setTemplateEditorOpen(false); setEditingTemplate(null);}} templateToEdit={editingTemplate} />}
 
             <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

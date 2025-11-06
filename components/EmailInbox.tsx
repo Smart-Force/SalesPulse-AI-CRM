@@ -2,13 +2,13 @@ import React, { useState, useMemo } from 'react';
 import type { Email } from '../types';
 import { Card, CardContent, CardHeader } from './ui/Card';
 import ComposeEmailModal from './modals/ComposeEmailModal';
-import { Inbox, Send, FileText, Trash2, PenSquare, RefreshCw, Star, Paperclip, MoreVertical, Reply, Share, Archive } from 'lucide-react';
+import { Inbox, Send, FileText, Trash2, PenSquare, RefreshCw, Star, Paperclip, MoreVertical, Reply, Share, Archive, MailOpen, MousePointerClick } from 'lucide-react';
 
 const initialEmails: Email[] = [
-  { id: '1', from: 'Alice Johnson', to: 'Me', subject: 'Project Alpha Update', preview: 'Just a quick update on the project timeline...', body: 'Hi Team,<br><br>Just a quick update on the Project Alpha timeline. We are currently on track to meet the Q3 deadline. All milestones for this month have been achieved.<br><br>Best,<br>Alice', time: '10:45 AM', fullTime: 'July 26, 2024, 10:45 AM', read: false, hasAttachment: true, isImportant: true, threadCount: 3, status: 'delivered', tracking: { opened: false, clicked: false, replied: false }, avatarColor: '#3b82f6', initials: 'AJ', folder: 'Inbox', isNew: true },
-  { id: '2', from: 'Bob Williams', to: 'Me', subject: 'Lunch tomorrow?', preview: 'Hey, are you free for lunch tomorrow to discuss the new marketing campaign?', body: 'Hey,<br><br>Are you free for lunch tomorrow to discuss the new marketing campaign? I was thinking of that new Italian place downtown.<br><br>Cheers,<br>Bob', time: '9:30 AM', fullTime: 'July 26, 2024, 9:30 AM', read: false, hasAttachment: false, isImportant: false, threadCount: 1, status: 'sent', tracking: { opened: false, clicked: false, replied: false }, avatarColor: '#10b981', initials: 'BW', folder: 'Inbox' },
-  { id: '3', from: 'InnovateCorp', to: 'Me', subject: 'Your Weekly Digest', preview: 'Catch up on the latest news from InnovateCorp...', body: '<h1>InnovateCorp Weekly</h1><p>Here is your digest of the most important news from the past week.</p>', time: 'Yesterday', fullTime: 'July 25, 2024, 4:15 PM', read: true, hasAttachment: false, isImportant: false, threadCount: 1, status: 'opened', tracking: { opened: true, clicked: false, replied: false }, avatarColor: '#f59e0b', initials: 'IC', folder: 'Inbox' },
-  { id: '4', from: 'Me', to: 'Charlie Brown', subject: 'Re: Q3 Financials', preview: 'Here are the documents you requested...', body: 'Hi Charlie,<br><br>Attached are the Q3 financial reports. Let me know if you have any questions.<br><br>Thanks!', time: 'Yesterday', fullTime: 'July 25, 2024, 2:00 PM', read: true, hasAttachment: true, isImportant: false, threadCount: 1, status: 'sent', tracking: { opened: true, clicked: true, replied: false }, avatarColor: '#6366f1', initials: 'ME', folder: 'Sent' },
+  { id: '1', from: 'Alice Johnson', to: 'Me', subject: 'Project Alpha Update', preview: 'Just a quick update on the project timeline...', body: 'Hi Team,<br><br>Just a quick update on the Project Alpha timeline. We are currently on track to meet the Q3 deadline. All milestones for this month have been achieved.<br><br>Best,<br>Alice', time: '10:45 AM', fullTime: 'July 26, 2024, 10:45 AM', read: false, hasAttachment: true, isImportant: true, threadCount: 3, status: 'replied', tracking: { opened: true, clicked: true, replied: true }, avatarColor: '#3b82f6', initials: 'AJ', folder: 'Inbox', isNew: true },
+  { id: '2', from: 'Bob Williams', to: 'Me', subject: 'Lunch tomorrow?', preview: 'Hey, are you free for lunch tomorrow to discuss the new marketing campaign?', body: 'Hey,<br><br>Are you free for lunch tomorrow to discuss the new marketing campaign? I was thinking of that new Italian place downtown.<br><br>Cheers,<br>Bob', time: '9:30 AM', fullTime: 'July 26, 2024, 9:30 AM', read: false, hasAttachment: false, isImportant: false, threadCount: 1, status: 'delivered', tracking: { opened: true, clicked: false, replied: false }, avatarColor: '#10b981', initials: 'BW', folder: 'Inbox' },
+  { id: '3', from: 'InnovateCorp', to: 'Me', subject: 'Your Weekly Digest', preview: 'Catch up on the latest news from InnovateCorp...', body: '<h1>InnovateCorp Weekly</h1><p>Here is your digest of the most important news from the past week.</p>', time: 'Yesterday', fullTime: 'July 25, 2024, 4:15 PM', read: true, hasAttachment: false, isImportant: false, threadCount: 1, status: 'opened', tracking: { opened: true, clicked: true, replied: false }, avatarColor: '#f59e0b', initials: 'IC', folder: 'Inbox' },
+  { id: '4', from: 'Me', to: 'Charlie Brown', subject: 'Re: Q3 Financials', preview: 'Here are the documents you requested...', body: 'Hi Charlie,<br><br>Attached are the Q3 financial reports. Let me know if you have any questions.<br><br>Thanks!', time: 'Yesterday', fullTime: 'July 25, 2024, 2:00 PM', read: true, hasAttachment: true, isImportant: false, threadCount: 1, status: 'sent', tracking: { opened: true, clicked: true, replied: true }, avatarColor: '#6366f1', initials: 'ME', folder: 'Sent' },
 ];
 
 const folders = [
@@ -97,7 +97,15 @@ export const EmailInbox: React.FC = () => {
                         <p className={`font-semibold ${!email.read ? 'text-gray-900 dark:text-slate-100' : 'text-gray-700 dark:text-slate-300'}`}>{email.from}</p>
                         <p className="text-xs text-gray-500 dark:text-slate-400">{email.time}</p>
                     </div>
-                    <p className={`text-sm truncate mt-1 ${!email.read ? 'text-gray-800 dark:text-slate-200' : 'text-gray-600 dark:text-slate-400'}`}>{email.subject}</p>
+                    <div className="flex items-center justify-between mt-1">
+                        <p className={`text-sm truncate pr-2 ${!email.read ? 'text-gray-800 dark:text-slate-200' : 'text-gray-600 dark:text-slate-400'}`}>{email.subject}</p>
+                        <div className="flex items-center space-x-1.5 flex-shrink-0">
+                            {/* Fix: Wrapped icons in a span with a title for tooltip, as title prop is not supported directly. */}
+                            {email.tracking.opened && <span title="Opened"><MailOpen className="h-4 w-4 text-gray-400 dark:text-slate-500" /></span>}
+                            {email.tracking.clicked && <span title="Clicked"><MousePointerClick className="h-4 w-4 text-green-500" /></span>}
+                            {email.tracking.replied && <span title="Replied"><Reply className="h-4 w-4 text-blue-500" /></span>}
+                        </div>
+                    </div>
                     <p className="text-sm text-gray-500 dark:text-slate-500 truncate">{email.preview}</p>
                     <div className="flex items-center mt-2 space-x-2">
                         {email.hasAttachment && <Paperclip className="h-4 w-4 text-gray-400" />}

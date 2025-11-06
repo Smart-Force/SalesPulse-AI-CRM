@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
-import { MoreVertical, Search, Trash2, Tag, PlusCircle, Phone, Briefcase, CheckCircle, AlertCircle, HelpCircle, Zap, Loader2, ArrowUp, ArrowDown, Edit, ChevronDown } from 'lucide-react';
+import { MoreVertical, Search, Trash2, Tag, PlusCircle, Phone, Briefcase, CheckCircle, AlertCircle, HelpCircle, Zap, Loader2, ArrowUp, ArrowDown, Edit, ChevronDown, ListPlus, List, Users, LayoutGrid } from 'lucide-react';
+import AddToListModal from './modals/AddToListModal';
 import TaggingModal from './modals/TaggingModal';
 import AddProspectModal from './modals/AddProspectModal';
-import { Prospect, ProspectStatus, ConfidenceScore, ContactHistoryItem, NewProspectData } from '../types';
+import { Prospect, ProspectStatus, ConfidenceScore, ContactHistoryItem, NewProspectData, ProspectList, Deal, Product } from '../types';
 import ProspectIntelligencePanel from './ProspectIntelligencePanel';
 import { generateProspectIntelligence } from '../services/geminiService';
 
@@ -27,22 +28,30 @@ const confidenceOptions: ConfidenceScore[] = ['High', 'Medium', 'Low'];
 interface ProspectsProps {
     prospects: Prospect[];
     setProspects: React.Dispatch<React.SetStateAction<Prospect[]>>;
+    prospectLists: ProspectList[];
+    setProspectLists: React.Dispatch<React.SetStateAction<ProspectList[]>>;
+    deals: Deal[];
+    setDeals: React.Dispatch<React.SetStateAction<Deal[]>>;
+    products: Product[];
 }
 
-export const Prospects: React.FC<ProspectsProps> = ({ prospects, setProspects }) => {
-    const [selectedProspects, setSelectedProspects] = useState<string[]>(['1', '2']);
-    const [isTaggingModalOpen, setTaggingModalOpen] = useState(true);
+export const Prospects: React.FC<ProspectsProps> = ({ prospects, setProspects, prospectLists, setProspectLists, deals, setDeals, products }) => {
+    const [selectedProspects, setSelectedProspects] = useState<string[]>([]);
+    const [isTaggingModalOpen, setTaggingModalOpen] = useState(false);
     const [isAddModalOpen, setAddModalOpen] = useState(false);
+    const [isAddToListModalOpen, setAddToListModalOpen] = useState(false);
     const [isStatusMenuOpen, setStatusMenuOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewingProspect, setViewingProspect] = useState<Prospect | null>(null);
     const [enrichingProspectIds, setEnrichingProspectIds] = useState<string[]>([]);
+    const [activeView, setActiveView] = useState<'list' | 'board'>('list');
 
     const [statusFilter, setStatusFilter] = useState<ProspectStatus | 'All'>('All');
     const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceScore | 'All'>('All');
     const [tagFilter, setTagFilter] = useState<string>('All');
     const [sortBy, setSortBy] = useState<'name' | 'company' | 'lastContact'>('lastContact');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [selectedListId, setSelectedListId] = useState<string | null>(null);
 
     const allTags = useMemo(() => {
         return [...new Set(prospects.flatMap(p => p.tags))].sort();
@@ -50,6 +59,14 @@ export const Prospects: React.FC<ProspectsProps> = ({ prospects, setProspects })
 
     const processedProspects = useMemo(() => {
         let filtered = prospects;
+
+        if (selectedListId) {
+            const list = prospectLists.find(l => l.id === selectedListId);
+            if (list) {
+                const prospectIdsInList = new Set(list.prospectIds);
+                filtered = filtered.filter(p => prospectIdsInList.has(p.id));
+            }
+        }
 
         if (searchTerm.trim()) {
             const lowercasedFilter = searchTerm.toLowerCase();
@@ -91,8 +108,19 @@ export const Prospects: React.FC<ProspectsProps> = ({ prospects, setProspects })
         }
 
         return sorted;
-    }, [prospects, searchTerm, statusFilter, confidenceFilter, tagFilter, sortBy, sortOrder]);
+    }, [prospects, searchTerm, statusFilter, confidenceFilter, tagFilter, sortBy, sortOrder, selectedListId, prospectLists]);
     
+    const prospectsByStatus = useMemo(() => {
+        return processedProspects.reduce((acc, prospect) => {
+            const status = prospect.status;
+            if (!acc[status]) {
+                acc[status] = [];
+            }
+            acc[status].push(prospect);
+            return acc;
+        }, {} as Record<ProspectStatus, Prospect[]>);
+    }, [processedProspects]);
+
     const handleRowClick = (prospect: Prospect) => {
         setViewingProspect(prospect);
     };
@@ -164,6 +192,11 @@ export const Prospects: React.FC<ProspectsProps> = ({ prospects, setProspects })
     const handleDeleteSelected = () => {
         if (window.confirm(`Are you sure you want to delete ${selectedProspects.length} prospect(s)? This action cannot be undone.`)) {
             setProspects(prev => prev.filter(p => !selectedProspects.includes(p.id)));
+            // Also remove from any lists
+            setProspectLists(prevLists => prevLists.map(list => ({
+                ...list,
+                prospectIds: list.prospectIds.filter(id => !selectedProspects.includes(id))
+            })));
             setSelectedProspects([]);
         }
     };
@@ -207,207 +240,257 @@ export const Prospects: React.FC<ProspectsProps> = ({ prospects, setProspects })
         setAddModalOpen(false);
     };
 
+    const handleCreateList = () => {
+        const listName = prompt("Enter new list name:");
+        if (listName && listName.trim()) {
+            const newList: ProspectList = {
+                id: `list${Date.now()}`,
+                name: listName.trim(),
+                prospectIds: [],
+                createdAt: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+            };
+            setProspectLists(prev => [newList, ...prev]);
+        }
+    };
+    
+    const handleAddSelectedToList = (listId: string) => {
+        setProspectLists(prev => prev.map(list => {
+            if (list.id === listId) {
+                const newProspectIds = [...new Set([...list.prospectIds, ...selectedProspects])];
+                return { ...list, prospectIds: newProspectIds };
+            }
+            return list;
+        }));
+        setAddToListModalOpen(false);
+        setSelectedProspects([]);
+    };
+    
+    const handleCreateAndAddToList = (listName: string) => {
+        const newList: ProspectList = {
+            id: `list${Date.now()}`,
+            name: listName,
+            prospectIds: selectedProspects,
+            createdAt: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        };
+        setProspectLists(prev => [newList, ...prev]);
+        setAddToListModalOpen(false);
+        setSelectedProspects([]);
+    };
+
+    const handleDragStart = (e: React.DragEvent, prospectId: string) => {
+        e.dataTransfer.setData("prospectId", prospectId);
+    };
+    
+    const handleDrop = (e: React.DragEvent, newStatus: ProspectStatus) => {
+        const prospectId = e.dataTransfer.getData("prospectId");
+        setProspects(prev => prev.map(p => p.id === prospectId ? { ...p, status: newStatus } : p));
+        e.currentTarget.classList.remove('bg-blue-100', 'dark:bg-blue-900/30');
+    };
+    
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.currentTarget.classList.add('bg-blue-100', 'dark:bg-blue-900/30');
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.currentTarget.classList.remove('bg-blue-100', 'dark:bg-blue-900/30');
+    };
+
     const isAllSelected = useMemo(() => processedProspects.length > 0 && selectedProspects.length === processedProspects.length, [processedProspects, selectedProspects]);
-
-    return (
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {isTaggingModalOpen && <TaggingModal onAddTags={handleAddTags} onClose={() => setTaggingModalOpen(false)} />}
-            {isAddModalOpen && <AddProspectModal onAddProspect={handleAddProspect} onClose={() => setAddModalOpen(false)} />}
-            {viewingProspect && <ProspectIntelligencePanel prospect={viewingProspect} onClose={() => setViewingProspect(null)} onUpdateProspect={handleUpdateProspect} />}
-
-
-            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Prospects</h1>
-                    <p className="mt-1 text-gray-600 dark:text-slate-400">Manage and research your leads and potential customers.</p>
-                </div>
-                 <button onClick={() => setAddModalOpen(true)} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm">
-                    <PlusCircle className="h-5 w-5 mr-2" />
-                    Add Prospect
-                </button>
+    
+    const renderFilters = () => (
+        <div className="mb-4 flex flex-wrap items-center gap-4 p-4 bg-white dark:bg-slate-800/50 rounded-lg border dark:border-slate-700 shadow-sm">
+            <div className="relative flex-grow sm:flex-grow-0 sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input 
+                    type="text" 
+                    placeholder="Search by name, company..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500" 
+                />
             </div>
-            
-            <div className="mb-4 flex flex-wrap items-center gap-4 p-4 bg-white dark:bg-slate-800/50 rounded-lg border dark:border-slate-700 shadow-sm">
-                <div className="relative flex-grow sm:flex-grow-0 sm:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input 
-                        type="text" 
-                        placeholder="Search by name, company..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500" 
-                    />
-                </div>
+            {activeView === 'list' && (
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="py-2 pl-3 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 text-sm">
                     <option value="All">All Statuses</option>
                     {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <select value={confidenceFilter} onChange={(e) => setConfidenceFilter(e.target.value as any)} className="py-2 pl-3 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 text-sm">
-                    <option value="All">All Confidence</option>
-                    {confidenceOptions.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="py-2 pl-3 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 text-sm">
-                    <option value="All">All Tags</option>
-                    {allTags.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <div className="flex items-center gap-2 ml-auto">
-                     <label htmlFor="sort-by" className="text-sm font-medium text-gray-600 dark:text-slate-400">Sort by:</label>
-                     <select id="sort-by" value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="py-2 pl-3 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 text-sm">
-                        <option value="lastContact">Last Contact</option>
-                        <option value="name">Name</option>
-                        <option value="company">Company</option>
-                    </select>
-                    <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700">
-                        {sortOrder === 'asc' ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
+            )}
+            <select value={confidenceFilter} onChange={(e) => setConfidenceFilter(e.target.value as any)} className="py-2 pl-3 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 text-sm">
+                <option value="All">All Confidence</option>
+                {confidenceOptions.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="py-2 pl-3 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 text-sm">
+                <option value="All">All Tags</option>
+                {allTags.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <div className="flex items-center gap-2 ml-auto">
+                <span className="isolate inline-flex rounded-md shadow-sm">
+                    <button onClick={() => setActiveView('list')} type="button" className={`relative inline-flex items-center rounded-l-md px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 dark:ring-slate-600 focus:z-10 ${activeView === 'list' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                        <List className="h-5 w-5" />
+                    </button>
+                    <button onClick={() => setActiveView('board')} type="button" className={`relative -ml-px inline-flex items-center rounded-r-md px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 dark:ring-slate-600 focus:z-10 ${activeView === 'board' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                        <LayoutGrid className="h-5 w-5" />
+                    </button>
+                </span>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="bg-slate-50 dark:bg-slate-900">
+            {isTaggingModalOpen && <TaggingModal onAddTags={handleAddTags} onClose={() => setTaggingModalOpen(false)} />}
+            {isAddModalOpen && <AddProspectModal onAddProspect={handleAddProspect} onClose={() => setAddModalOpen(false)} />}
+            {isAddToListModalOpen && <AddToListModal onClose={() => setAddToListModalOpen(false)} prospectLists={prospectLists} onAddToList={handleAddSelectedToList} onCreateAndAddToList={handleCreateAndAddToList} />}
+            {viewingProspect && <ProspectIntelligencePanel 
+                                    prospect={viewingProspect} 
+                                    onClose={() => setViewingProspect(null)} 
+                                    onUpdateProspect={handleUpdateProspect}
+                                    deals={deals.filter(d => d.prospectId === viewingProspect.id)}
+                                    setDeals={setDeals}
+                                    products={products}
+                                />}
+
+            <main className="h-[calc(100vh-4rem)] flex flex-col p-4 sm:p-6 lg:p-8 overflow-hidden">
+                <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-shrink-0">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Prospects</h1>
+                        <p className="mt-1 text-gray-600 dark:text-slate-400">Manage and research your leads and potential customers.</p>
+                    </div>
+                    <button onClick={() => setAddModalOpen(true)} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-sm">
+                        <PlusCircle className="h-5 w-5 mr-2" />
+                        Add Prospect
                     </button>
                 </div>
-            </div>
-
-            <Card>
-                <CardHeader className="p-4 border-b border-gray-200 dark:border-slate-700 min-h-[60px]">
-                    {selectedProspects.length > 0 ? (
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{selectedProspects.length} selected</span>
-                            <div className="flex items-center space-x-2">
-                                <div className="relative">
-                                    <button 
-                                        onClick={() => setStatusMenuOpen(!isStatusMenuOpen)}
-                                        className="flex items-center px-3 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600"
-                                    >
-                                        <Edit className="h-4 w-4 mr-2" /> Change Status <ChevronDown className="h-4 w-4 ml-1 -mr-1" />
-                                    </button>
-                                    {isStatusMenuOpen && (
-                                        <div 
-                                            className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-slate-800 ring-1 ring-black dark:ring-slate-700 ring-opacity-5 z-10"
-                                            onMouseLeave={() => setStatusMenuOpen(false)}
-                                        >
-                                            <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-                                                {statusOptions.map(status => (
-                                                    <a 
-                                                        key={status} 
-                                                        href="#"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            handleChangeStatus(status);
-                                                        }} 
-                                                        className="block px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700"
-                                                        role="menuitem"
-                                                    >
-                                                        Set to {status}
-                                                    </a>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <button onClick={() => setTaggingModalOpen(true)} className="flex items-center px-3 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600">
-                                    <Tag className="h-4 w-4 mr-2" /> Add Tags
-                                </button>
-                                <button onClick={handleDeleteSelected} className="flex items-center px-3 py-1.5 text-sm bg-red-50 dark:bg-red-500/10 text-red-600 border border-red-200 dark:border-red-500/20 rounded-md shadow-sm hover:bg-red-100 dark:hover:bg-red-500/20">
-                                    <Trash2 className="h-4 w-4 mr-2" /> Delete
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <CardTitle className="text-lg">All Prospects ({processedProspects.length})</CardTitle>
-                    )}
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-                            <thead className="bg-gray-50 dark:bg-slate-800/50">
-                                <tr>
-                                    <th scope="col" className="p-4">
-                                        <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={isAllSelected} onChange={handleSelectAll} />
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Company</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Confidence</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Last Contact</th>
-                                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
-                                {processedProspects.length > 0 ? processedProspects.map((prospect) => (
-                                    <tr key={prospect.id} onClick={() => handleRowClick(prospect)} className={`${selectedProspects.includes(prospect.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''} hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer`}>
-                                        <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                                            <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={selectedProspects.includes(prospect.id)} onChange={() => handleSelectOne(prospect.id)} />
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <div className="h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center text-white font-semibold" style={{ backgroundColor: prospect.avatarColor }}>
-                                                    {prospect.initials}
-                                                </div>
-                                                <div className="ml-4">
-                                                    <div className="text-sm font-medium text-gray-900 dark:text-slate-100">{prospect.name}</div>
-                                                    <div className="text-sm text-gray-500 dark:text-slate-400">{prospect.email}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            <div className="text-gray-700 dark:text-slate-300">{prospect.company}</div>
-                                            {prospect.title && (
-                                                <div className="flex items-center text-xs text-gray-500 dark:text-slate-400 mt-1">
-                                                    <Briefcase className="h-3 w-3 mr-1.5" />
-                                                    {prospect.title}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[prospect.status]}`}>
-                                                {prospect.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            {prospect.confidenceScore && (() => {
-                                                const { icon: ConfidenceIcon, color } = confidenceStyles[prospect.confidenceScore];
-                                                return (
-                                                    <div className={`flex items-center ${color}`}>
-                                                        <ConfidenceIcon className="h-4 w-4 mr-1.5" />
-                                                        <span className="font-medium">{prospect.confidenceScore}</span>
-                                                    </div>
-                                                );
-                                            })()}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">{prospect.lastContact}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            {!prospect.isEnriched && (
-                                                enrichingProspectIds.includes(prospect.id) ? (
-                                                    <button
-                                                        className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-md text-gray-500 bg-gray-100 dark:bg-slate-700 cursor-wait mr-2"
-                                                        disabled
-                                                    >
-                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                        Enriching...
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        onClick={(e) => handleEnrichProspectRow(prospect.id, e)}
-                                                        className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-md text-blue-600 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900 mr-2"
-                                                    >
-                                                        <Zap className="h-4 w-4 mr-2" />
-                                                        Enrich with AI
-                                                    </button>
-                                                )
-                                            )}
-                                            <button className="text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200 inline-block align-middle" onClick={(e) => e.stopPropagation()}>
-                                                <MoreVertical className="h-5 w-5" />
+                
+                <div className="flex items-center border-b border-gray-200 dark:border-slate-700 mb-4">
+                    <nav className="flex-1 -mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+                        <button
+                            onClick={() => setSelectedListId(null)}
+                            className={`flex items-center whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                selectedListId === null
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-600'
+                            }`}
+                        >
+                           <Users className="h-5 w-5 mr-2" /> All Prospects
+                            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-slate-200">
+                                {prospects.length}
+                            </span>
+                        </button>
+                        {prospectLists.map(list => (
+                            <button
+                                key={list.id}
+                                onClick={() => setSelectedListId(list.id)}
+                                className={`flex items-center whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                    selectedListId === list.id
+                                    ? 'border-blue-600 text-blue-600'
+                                    : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-600'
+                                }`}
+                            >
+                                <List className="h-5 w-5 mr-2" /> {list.name}
+                                <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-slate-200">
+                                    {list.prospectIds.length}
+                                </span>
+                            </button>
+                        ))}
+                    </nav>
+                     <button onClick={handleCreateList} title="Create New List" className="ml-4 flex-shrink-0 flex items-center px-3 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600">
+                        <ListPlus className="h-4 w-4 mr-2"/>
+                        New List
+                    </button>
+                </div>
+                
+                {renderFilters()}
+                
+                {activeView === 'list' && (
+                    <Card className="flex-grow overflow-hidden flex flex-col">
+                        <CardHeader className="p-4 border-b border-gray-200 dark:border-slate-700 min-h-[60px] flex-shrink-0">
+                            {selectedProspects.length > 0 ? (
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{selectedProspects.length} selected</span>
+                                    <div className="flex items-center space-x-2">
+                                        <div className="relative">
+                                            <button onClick={() => setStatusMenuOpen(!isStatusMenuOpen)} className="flex items-center px-3 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600">
+                                                <Edit className="h-4 w-4 mr-2" /> Change Status <ChevronDown className="h-4 w-4 ml-1 -mr-1" />
                                             </button>
-                                        </td>
-                                    </tr>
-                                )) : (
+                                            {isStatusMenuOpen && (<div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-slate-800 ring-1 ring-black dark:ring-slate-700 ring-opacity-5 z-10" onMouseLeave={() => setStatusMenuOpen(false)}><div className="py-1">{statusOptions.map(status => (<a key={status} href="#" onClick={(e) => { e.preventDefault(); handleChangeStatus(status); }} className="block px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700">Set to {status}</a>))}</div></div>)}
+                                        </div>
+                                        <button onClick={() => setAddToListModalOpen(true)} className="flex items-center px-3 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600"><List className="h-4 w-4 mr-2" /> Add to List</button>
+                                        <button onClick={() => setTaggingModalOpen(true)} className="flex items-center px-3 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600"><Tag className="h-4 w-4 mr-2" /> Add Tags</button>
+                                        <button onClick={handleDeleteSelected} className="flex items-center px-3 py-1.5 text-sm bg-red-50 dark:bg-red-500/10 text-red-600 border border-red-200 dark:border-red-500/20 rounded-md shadow-sm hover:bg-red-100 dark:hover:bg-red-500/20"><Trash2 className="h-4 w-4 mr-2" /> Delete</button>
+                                    </div>
+                                </div>
+                            ) : (<CardTitle className="text-lg">{selectedListId ? prospectLists.find(l=>l.id===selectedListId)?.name : 'All Prospects'} ({processedProspects.length})</CardTitle>)}
+                        </CardHeader>
+                        <CardContent className="p-0 flex-grow overflow-y-auto">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                                <thead className="bg-gray-50 dark:bg-slate-800/50 sticky top-0">
                                     <tr>
-                                        <td colSpan={7} className="text-center py-12 text-gray-500 dark:text-slate-400">
-                                            No prospects found.
-                                        </td>
+                                        <th scope="col" className="p-4"><input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={isAllSelected} onChange={handleSelectAll} /></th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Company</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tags</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Confidence</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Last Contact</th>
+                                        <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+                                    {processedProspects.length > 0 ? processedProspects.map((prospect) => (
+                                        <tr key={prospect.id} onClick={() => handleRowClick(prospect)} className={`${selectedProspects.includes(prospect.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''} hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer`}>
+                                            <td className="p-4" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={selectedProspects.includes(prospect.id)} onChange={() => handleSelectOne(prospect.id)} /></td>
+                                            <td className="px-6 py-4 whitespace-nowrap"><div className="flex items-center"><div className="h-10 w-10 flex-shrink-0 rounded-full flex items-center justify-center text-white font-semibold" style={{ backgroundColor: prospect.avatarColor }}>{prospect.initials}</div><div className="ml-4"><div className="text-sm font-medium text-gray-900 dark:text-slate-100">{prospect.name}</div><div className="text-sm text-gray-500 dark:text-slate-400">{prospect.email}</div></div></div></td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm"><div className="text-gray-700 dark:text-slate-300">{prospect.company}</div>{prospect.title && (<div className="flex items-center text-xs text-gray-500 dark:text-slate-400 mt-1"><Briefcase className="h-3 w-3 mr-1.5" />{prospect.title}</div>)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[prospect.status]}`}>{prospect.status}</span></td>
+                                            <td className="px-6 py-4 whitespace-nowrap"><div className="flex flex-wrap gap-1">{prospect.tags.map(tag => <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-200">{tag}</span>)}</div></td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm">{prospect.confidenceScore && (() => { const { icon: ConfidenceIcon, color } = confidenceStyles[prospect.confidenceScore]; return (<div className={`flex items-center ${color}`}><ConfidenceIcon className="h-4 w-4 mr-1.5" /><span className="font-medium">{prospect.confidenceScore}</span></div>); })()}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">{prospect.lastContact}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                {!prospect.isEnriched && (enrichingProspectIds.includes(prospect.id) ? (<button className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-md text-gray-500 bg-gray-100 dark:bg-slate-700 cursor-wait mr-2" disabled><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enriching...</button>) : (<button onClick={(e) => handleEnrichProspectRow(prospect.id, e)} className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-md text-blue-600 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900 mr-2"><Zap className="h-4 w-4 mr-2" />Enrich with AI</button>))}
+                                                <button className="text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200 inline-block align-middle" onClick={(e) => e.stopPropagation()}><MoreVertical className="h-5 w-5" /></button>
+                                            </td>
+                                        </tr>
+                                    )) : (<tr><td colSpan={8} className="text-center py-12 text-gray-500 dark:text-slate-400">No prospects found.</td></tr>)}
+                                </tbody>
+                            </table>
+                        </CardContent>
+                    </Card>
+                )}
+                {activeView === 'board' && (
+                     <div className="flex-grow flex gap-4 overflow-x-auto pb-4">
+                        {statusOptions.map(status => (
+                            <div key={status} onDrop={(e) => handleDrop(e, status)} onDragOver={handleDragOver} onDragLeave={handleDragLeave} className="w-72 flex-shrink-0 bg-slate-100 dark:bg-slate-900/50 rounded-lg flex flex-col transition-colors">
+                                <h3 className={`p-3 text-sm font-semibold text-gray-700 dark:text-slate-200 border-b-2 ${statusColors[status].replace('bg-', 'border-').replace(/text-\w+-\d+/, '')}`}>{status} <span className="text-gray-400 font-normal ml-1">({prospectsByStatus[status]?.length || 0})</span></h3>
+                                <div className="p-2 space-y-2 overflow-y-auto flex-grow">
+                                    {(prospectsByStatus[status] || []).map(prospect => {
+                                        const { icon: ConfidenceIcon, color } = confidenceStyles[prospect.confidenceScore || 'Low'];
+                                        return (
+                                            <Card key={prospect.id} draggable onDragStart={(e) => handleDragStart(e, prospect.id)} onClick={() => handleRowClick(prospect)} className="cursor-pointer hover:ring-2 hover:ring-blue-500">
+                                                <CardContent className="p-3">
+                                                    <div className="flex items-start justify-between">
+                                                        <p className="font-semibold text-sm text-gray-800 dark:text-slate-100">{prospect.name}</p>
+                                                        <div className="h-8 w-8 flex-shrink-0 rounded-full flex items-center justify-center text-white text-xs font-semibold" style={{ backgroundColor: prospect.avatarColor }}>{prospect.initials}</div>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 dark:text-slate-400">{prospect.company}</p>
+                                                    <div className="flex flex-wrap gap-1 mt-2">
+                                                        {prospect.tags.map(tag => <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-200">{tag}</span>)}
+                                                    </div>
+                                                    <div className="flex items-center justify-between mt-3 text-xs">
+                                                        <span className="text-gray-500 dark:text-slate-400">{prospect.lastContact}</span>
+                                                        <div className={`flex items-center ${color}`}><ConfidenceIcon className="h-3 w-3 mr-1" />{prospect.confidenceScore}</div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                </CardContent>
-            </Card>
+                )}
+            </main>
         </div>
     );
 };

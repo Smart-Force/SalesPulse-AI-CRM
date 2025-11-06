@@ -1,7 +1,7 @@
 import { Prospect, ContactHistoryItem } from '../types';
 
 export const initialProspects: Prospect[] = [
-  { id: '1', name: 'Liam Johnson', avatarColor: '#3b82f6', initials: 'LJ', company: 'InnovateCorp', email: 'liam.j@innovate.com', phone: '123-456-7890', title: 'VP of Engineering', status: 'Engaged', lastContact: '2 hours ago', lastContactDate: new Date(Date.now() - 2 * 60 * 60 * 1000), tags: ['High-Priority', 'Q3-Target'], isEnriched: true, confidenceScore: 'High', decisionAuthorityScore: 9, companyDetails: { industry: 'SaaS', revenue: '$50M', employeeCount: '250' }, contactHistory: [
+  { id: '1', name: 'Liam Johnson', avatarColor: '#3b82f6', initials: 'LJ', company: 'InnovateCorp', email: 'liam.j@innovate.com', phone: '123-456-7890', title: 'VP of Engineering', status: 'Engaged', lastContact: '2 hours ago', lastContactDate: new Date(Date.now() - 2 * 60 * 60 * 1000), tags: ['High-Priority', 'Q3-Target'], dealIds: ['deal1'], isEnriched: true, confidenceScore: 'High', decisionAuthorityScore: 9, companyDetails: { industry: 'SaaS', revenue: '$50M', employeeCount: '250' }, contactHistory: [
     { date: 'July 25, 2024', type: 'Email', outcome: 'Opened, no reply.', aiInsight: 'Lack of reply after opening could signal hesitation or a busy schedule. A follow-up call might be more effective.' },
     { date: 'July 22, 2024', type: 'Call', outcome: 'Left voicemail regarding proposal.', aiInsight: 'Voicemails have a low response rate. An email with a clear CTA is a better next step.' },
     { date: 'July 15, 2024', type: 'Meeting', outcome: 'Initial discovery call, positive feedback.', aiInsight: 'Positive feedback on pricing indicates this is a key value driver for them. Mention it in follow-ups.' },

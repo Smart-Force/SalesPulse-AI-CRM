@@ -244,13 +244,15 @@ export const EmailAutomation: React.FC = () => {
                     </div>
                      <div className="text-sm text-gray-800 dark:text-slate-200 space-y-1">
                         <b>Sequence:</b>
-                        <div className="pl-4 text-xs text-gray-600 dark:text-slate-400">
-                            {workflow.actions.map((action, index) => (
-                                <span key={action.id} className="flex items-center">
-                                    {action.type === 'send_email' && `Send "${template(action.templateId!)}"`}
-                                    {action.type === 'wait' && `Wait for ${action.days} days`}
-                                    {index < workflow.actions.length - 1 && <ArrowRight className="h-3 w-3 mx-1 text-gray-400"/>}
-                                </span>
+                        <div className="pl-4 text-xs text-gray-600 dark:text-slate-400 flex flex-wrap items-center gap-y-1">
+                           {workflow.actions.map((action, index) => (
+                                <React.Fragment key={action.id}>
+                                    <span className="flex items-center p-1 bg-slate-200 dark:bg-slate-600 rounded">
+                                        {action.type === 'send_email' && <><Mail className="h-3 w-3 mr-1.5"/>{`Send "${template(action.templateId!)}"`}</>}
+                                        {action.type === 'wait' && <><Clock className="h-3 w-3 mr-1.5"/>{`Wait for ${action.days} days`}</>}
+                                    </span>
+                                    {index < workflow.actions.length - 1 && <ArrowRight className="h-3 w-3 mx-1 text-gray-400 flex-shrink-0"/>}
+                                </React.Fragment>
                             ))}
                         </div>
                     </div>

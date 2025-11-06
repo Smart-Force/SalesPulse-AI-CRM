@@ -1,21 +1,27 @@
 import React, { useState } from 'react';
-import { User, Lock, Settings as SettingsIcon, Palette, CreditCard, Bell } from 'lucide-react';
+import { User as UserIcon, Lock, Settings as SettingsIcon, Palette, CreditCard, Bell, Users } from 'lucide-react';
 import { ProfileSettings } from './settings/ProfileSettings';
 import { AccountSettings } from './settings/AccountSettings';
 import { SecuritySettings } from './settings/SecuritySettings';
 import { AppearanceSettings } from './settings/AppearanceSettings';
 import { BillingSettings } from './settings/BillingSettings';
 import { NotificationsSettings } from './settings/NotificationsSettings';
+import { TeamSettings } from './settings/TeamSettings';
+import type { SettingsTab, User } from '../types';
 
-type SettingsTab = 'profile' | 'security' | 'account' | 'appearance' | 'billing' | 'notifications';
+interface SettingsProps {
+    users: User[];
+    setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+}
 
 const userSettingsTabs: { id: SettingsTab; name: string; icon: React.ElementType }[] = [
-  { id: 'profile', name: 'Profile', icon: User },
+  { id: 'profile', name: 'Profile', icon: UserIcon },
   { id: 'security', name: 'Security', icon: Lock },
   { id: 'account', name: 'Account', icon: SettingsIcon },
 ];
 
 const workspaceSettingsTabs: { id: SettingsTab; name: string; icon: React.ElementType }[] = [
+  { id: 'team', name: 'Team', icon: Users },
   { id: 'appearance', name: 'Appearance', icon: Palette },
   { id: 'billing', name: 'Billing', icon: CreditCard },
   { id: 'notifications', name: 'Notifications', icon: Bell },
@@ -41,7 +47,7 @@ const NavButton: React.FC<NavButtonProps> = ({ tab, isActive, onClick }) => (
   </button>
 );
 
-export const Settings: React.FC = () => {
+export const Settings: React.FC<SettingsProps> = ({ users, setUsers }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
   const renderContent = () => {
@@ -49,6 +55,7 @@ export const Settings: React.FC = () => {
       case 'profile': return <ProfileSettings />;
       case 'security': return <SecuritySettings />;
       case 'account': return <AccountSettings />;
+      case 'team': return <TeamSettings users={users} setUsers={setUsers} />;
       case 'appearance': return <AppearanceSettings />;
       case 'billing': return <BillingSettings />;
       case 'notifications': return <NotificationsSettings />;

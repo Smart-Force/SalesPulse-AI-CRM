@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { GeneratorFormState, Template, Prospect, ResearchResult } from '../types';
-import { varakitProducts } from "../data/varakitProducts";
+import { initialProducts } from "../data/products";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -21,7 +21,7 @@ const generatePrompt = (type: string, formData: GeneratorFormState): string => {
       prompt += "Generate 5 compelling, strategic email subject lines that create urgency or curiosity. Return them as a simple, unnumbered list, each on a new line.";
       break;
     case 'followup':
-      prompt += "Generate a concise and effective follow-up message that adds value and strategically moves the conversation forward. Assume a previous interaction has occurred. Format it as a simple paragraph.";
+      prompt += "Generate a concise and effective follow-up message that adds value and strategically moves the conversation forward. Assume a previous interaction has occurred. Format it as one or more HTML paragraphs using <p> tags.";
       break;
     default:
       prompt += "Generate relevant, strategic content based on this information.";
@@ -43,8 +43,14 @@ export const generateContent = async (type: string, formData: GeneratorFormState
     if (!text) {
         throw new Error("No content generated.");
     }
-
-    return text.replace(/\n/g, '<br>');
+    
+    // Only apply newline-to-br conversion for subject lines, which are expected as a simple list.
+    // For other types, the prompt now requests HTML directly.
+    if (type === 'subject') {
+        return text.replace(/\n/g, '<br>');
+    }
+    
+    return text;
   } catch (error) {
     console.error("Error generating content with Gemini API:", error);
     return "Sorry, there was an error generating the content. Please check the console for details.";
@@ -286,7 +292,7 @@ export const findCompaniesAndExecutives = async (city: string, companySize: stri
 };
 
 export const generateOutreachPlan = async (prospect: ResearchResult): Promise<{ plan: any; sources: any[] }> => {
-    const productList = varakitProducts.map(p => `- ${p.name}: ${p.description}`).join('\n');
+    const productList = initialProducts.map(p => `- ${p.name} (${p.tier} - ${p.billingType}): ${p.description.join(' ')}`).join('\n');
     
     const prompt = `
         Act as an expert Sales Enablement AI for 'Varakit', a digital marketing and branding agency.

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { NavItem, View } from '../types';
 import {
-  Rocket, LayoutDashboard, Mail, Bot, BarChart, Settings, LifeBuoy, Zap, Users, Target, CheckCircle, Clock, XCircle, ChevronDown, Telescope, Workflow
+  Rocket, LayoutDashboard, Mail, Bot, BarChart, Settings, LifeBuoy, Zap, Users, Target, CheckCircle, Clock, XCircle, ChevronDown, Telescope, Workflow, FilePlay, Package
 } from 'lucide-react';
 
 const navigationItems: NavItem[] = [
@@ -9,9 +9,9 @@ const navigationItems: NavItem[] = [
   { name: 'Lead Generation', view: 'lead-generation', icon: Telescope },
   { name: 'Prospects', view: 'prospects', icon: Users },
   { name: 'Campaigns', view: 'campaigns', icon: Target },
+  { name: 'Products', view: 'products', icon: Package },
   { name: 'Email Inbox', view: 'email-inbox', icon: Mail, badge: 3 },
-  { name: 'Email Automation', view: 'email-automation', icon: Workflow },
-  { name: 'AI Generator', view: 'ai-generator', icon: Bot },
+  { name: 'Playbooks', view: 'playbooks', icon: FilePlay },
   { name: 'Analytics', view: 'analytics', icon: BarChart },
   { name: 'Integrations', view: 'integrations', icon: Zap },
   { name: 'Settings', view: 'settings', icon: Settings },

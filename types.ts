@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type View = 'dashboard' | 'lead-generation' | 'email-inbox' | 'email-automation' | 'settings' | 'prospects' | 'campaigns' | 'ai-generator' | 'analytics' | 'business-intelligence' | 'integrations';
+export type View = 'dashboard' | 'lead-generation' | 'email-inbox' | 'playbooks' | 'settings' | 'prospects' | 'campaigns' | 'ai-generator' | 'analytics' | 'business-intelligence' | 'integrations' | 'products';
 
 export interface NavItem {
   name: string;
@@ -50,6 +50,7 @@ export interface ContactHistoryItem {
   type: 'Email' | 'Call' | 'Meeting';
   outcome: string;
   aiInsight?: string;
+  duration?: string;
 }
 
 export interface Prospect {
@@ -65,6 +66,7 @@ export interface Prospect {
   lastContact: string;
   lastContactDate: Date;
   tags: string[];
+  dealIds?: string[];
 
   // Prospect Intelligence Fields
   isEnriched?: boolean;
@@ -115,6 +117,14 @@ export interface Campaign {
   createdDate: string;
   steps: CampaignStep[];
   prospectIds: string[];
+  prospectListIds: string[];
+}
+
+export interface ProspectList {
+  id: string;
+  name: string;
+  prospectIds: string[];
+  createdAt: string;
 }
 
 export interface ResearchResult {
@@ -154,4 +164,85 @@ export interface NewProspectData {
     title?: string;
     status: ProspectStatus;
     tags: string[];
+}
+
+export type UserRole = 'Admin' | 'Member';
+
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    avatarUrl?: string;
+    avatarColor: string;
+    initials: string;
+}
+
+export type SettingsTab = 'profile' | 'security' | 'account' | 'appearance' | 'billing' | 'notifications' | 'team';
+
+// New Playbook types
+export type PlaybookTriggerType = 'prospect_status_change';
+
+export interface PlaybookTrigger {
+    type: PlaybookTriggerType;
+    value: ProspectStatus;
+}
+
+export type PlaybookActionType = 'generate_and_send_ai_email' | 'send_email_template' | 'wait';
+
+export interface PlaybookAction {
+    id: string;
+    type: PlaybookActionType;
+    // For 'generate_and_send_ai_email'
+    goal?: string;
+    tone?: string;
+    keyPoints?: string;
+    // For 'send_email_template'
+    templateId?: string;
+    // For 'wait'
+    days?: number;
+}
+
+export interface Playbook {
+    id: string;
+    name: string;
+    isActive: boolean;
+    trigger: PlaybookTrigger;
+    actions: PlaybookAction[];
+}
+
+export interface Product {
+  id: string;
+  tier: string;
+  name: string;
+  description: string[];
+  billingType: 'Monthly' | 'One-time';
+  basePrice: number;
+  commissionRate: number; // e.g., 0.25 for 25%
+  negotiatedCommissionRate: number;
+  discountRate: number;
+}
+
+// Deal-related types
+export type DealStatus = 'Proposal' | 'Negotiating' | 'Won' | 'Lost';
+
+export interface DealLineItem {
+    id: string; // Unique ID for this line item instance
+    productId: string;
+    name: string; // Copied from product for display
+    basePrice: number; // Copied from product
+    billingType: 'Monthly' | 'One-time';
+    commissionRate: number; // Base commission rate from product
+    negotiatedCommissionRate?: number;
+    discountRate?: number;
+}
+
+export interface Deal {
+    id: string;
+    prospectId: string;
+    name: string;
+    status: DealStatus;
+    lineItems: DealLineItem[];
+    createdAt: Date;
+    updatedAt: Date;
 }
