@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
 import { Telescope, Search, Loader2, Globe, Briefcase, Building, Bot, Wand2, Copy, Check, Mail, Linkedin, Users, Hash, UserPlus, ExternalLink, Phone, ChevronDown, ChevronRight, BarChart, Link, Download } from 'lucide-react';
 import type { ResearchResult, Prospect, ConfidenceScore } from '../types';
-import { findCompaniesAndExecutives, generateOutreachPlan } from '../services/geminiService';
+import { findCompaniesAndExecutives, generateOutreachPlan } from '../services/aiService';
 
 interface LeadGenerationProps {
     onAddProspects: (prospects: Prospect[]) => void;
+    prospects: Prospect[];
 }
 
 const copyToClipboard = (text: string, onCopy: () => void) => {
@@ -45,7 +46,7 @@ const OutreachContent: React.FC<{ title: string; content?: string; icon: React.E
     );
 };
 
-export const LeadGeneration: React.FC<LeadGenerationProps> = ({ onAddProspects }) => {
+export const LeadGeneration: React.FC<LeadGenerationProps> = ({ onAddProspects, prospects }) => {
     const [isSearching, setIsSearching] = useState(false);
     const [searchResults, setSearchResults] = useState<ResearchResult[]>([]);
     const [searchSources, setSearchSources] = useState<any[]>([]);
@@ -101,7 +102,25 @@ export const LeadGeneration: React.FC<LeadGenerationProps> = ({ onAddProspects }
 
     const handleAddSelectedToProspects = () => {
         const selectedResults = searchResults.filter(r => selectedIds.includes(r.id));
-        const newProspects: Prospect[] = selectedResults.map(r => {
+
+        const existingEmails = new Set(prospects.map(p => p.email.toLowerCase()));
+        const seenEmailsInSelection = new Set<string>();
+
+        const newUniqueResults = selectedResults.filter(result => {
+            const resultEmailLower = result.executiveEmail.toLowerCase();
+            if (existingEmails.has(resultEmailLower) || seenEmailsInSelection.has(resultEmailLower)) {
+                return false;
+            }
+            seenEmailsInSelection.add(resultEmailLower);
+            return true;
+        });
+
+        if (newUniqueResults.length === 0) {
+            alert('No new prospects to add. All selected leads are either duplicates of existing prospects or duplicates within the selection.');
+            return;
+        }
+
+        const newProspects: Prospect[] = newUniqueResults.map(r => {
             const initials = r.executiveName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
             return {
                 id: crypto.randomUUID(),
@@ -130,8 +149,18 @@ export const LeadGeneration: React.FC<LeadGenerationProps> = ({ onAddProspects }
                 notes: `Added from Lead Generation research.\nSource: ${r.companyName} website (${r.website})`,
             };
         });
-        onAddProspects(newProspects);
-        setSelectedIds([]);
+        
+        const duplicateCount = selectedResults.length - newUniqueResults.length;
+        let confirmationMessage = `You are about to add ${newProspects.length} new prospect(s).`;
+        if (duplicateCount > 0) {
+            confirmationMessage += ` ${duplicateCount} duplicate(s) were ignored.`;
+        }
+        confirmationMessage += " Proceed?";
+        
+        if (window.confirm(confirmationMessage)) {
+             onAddProspects(newProspects);
+             setSelectedIds([]);
+        }
     };
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {

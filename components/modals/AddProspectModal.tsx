@@ -50,6 +50,7 @@ const AddProspectModal: React.FC<AddProspectModalProps> = ({ onClose, onAddProsp
         e.preventDefault();
         if (validate()) {
             const tags = tagsInput.split(',').map(tag => tag.trim()).filter(Boolean);
+            // FIX: Remove 'source' property to match NewProspectData type.
             const prospectData: NewProspectData = {
                 ...formData,
                 phone: formData.phone || undefined,

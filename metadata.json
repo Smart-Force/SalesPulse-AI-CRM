@@ -1,5 +1,7 @@
 {
   "name": "SalesPulse AI CRM ",
   "description": "A comprehensive AI-powered CRM platform for sales teams, featuring lead generation, email automation, business intelligence, and content generation to streamline workflows and boost productivity.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

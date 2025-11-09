@@ -6,7 +6,7 @@ import TaggingModal from './modals/TaggingModal';
 import AddProspectModal from './modals/AddProspectModal';
 import { Prospect, ProspectStatus, ConfidenceScore, ContactHistoryItem, NewProspectData, ProspectList, Deal, Product } from '../types';
 import ProspectIntelligencePanel from './ProspectIntelligencePanel';
-import { generateProspectIntelligence } from '../services/geminiService';
+import { generateProspectIntelligence } from '../services/aiService';
 
 const statusColors: Record<ProspectStatus, string> = {
   'New': 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300',

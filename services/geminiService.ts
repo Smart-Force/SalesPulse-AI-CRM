@@ -1,60 +1,76 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { GeneratorFormState, Template, Prospect, ResearchResult } from '../types';
+// FIX: Import Deal type for generateDashboardBriefing function.
+import type { Template, Prospect, ResearchResult, Deal } from '../types';
 import { initialProducts } from "../data/products";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-const generatePrompt = (type: string, formData: GeneratorFormState): string => {
-  const { recipient, purpose, tone, keyPoints } = formData;
-  
-  let prompt = `You are a senior sales strategist, an expert in crafting compelling B2B communication. Your task is to generate highly strategic and impactful sales content. Generate content with a ${tone.toLowerCase()} tone for a recipient described as "${recipient}".\n`;
-  prompt += `The primary purpose is: "${purpose}".\n`;
-  if (keyPoints) {
-    prompt += `Incorporate these key points strategically: "${keyPoints}".\n`;
-  }
-
-  switch (type) {
-    case 'email':
-      prompt += "Generate a complete, strategic sales email body based on this information. It should be persuasive, clearly articulate value, and include a strong call to action. Format it nicely with HTML paragraphs.";
-      break;
-    case 'subject':
-      prompt += "Generate 5 compelling, strategic email subject lines that create urgency or curiosity. Return them as a simple, unnumbered list, each on a new line.";
-      break;
-    case 'followup':
-      prompt += "Generate a concise and effective follow-up message that adds value and strategically moves the conversation forward. Assume a previous interaction has occurred. Format it as one or more HTML paragraphs using <p> tags.";
-      break;
-    default:
-      prompt += "Generate relevant, strategic content based on this information.";
-  }
-
-  return prompt;
+const getApiKey = (): string => {
+    try {
+        const storedKeys = localStorage.getItem('apiKeys');
+        if (storedKeys) {
+            const keys = JSON.parse(storedKeys);
+            // Use Gemini key, fallback to env var, then empty string
+            return keys['gemini'] || process.env.API_KEY || '';
+        }
+    } catch (e) {
+        console.error("Failed to parse API keys from localStorage", e);
+    }
+    // Fallback if localStorage is empty or fails
+    return process.env.API_KEY || '';
 };
 
-export const generateContent = async (type: string, formData: GeneratorFormState): Promise<string> => {
-  try {
-    const prompt = generatePrompt(type, formData);
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-    });
-    
-    // Using response.text as per the new SDK guidelines
-    const text = response.text;
-    if (!text) {
-        throw new Error("No content generated.");
+const getGenAIClient = () => {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error("Gemini API key is not configured. Please add it in Settings > AI Provider.");
     }
-    
-    // Only apply newline-to-br conversion for subject lines, which are expected as a simple list.
-    // For other types, the prompt now requests HTML directly.
-    if (type === 'subject') {
-        return text.replace(/\n/g, '<br>');
+    return new GoogleGenAI({ apiKey });
+}
+
+export const generateWorkflowEmail = async (prospect: Prospect, tone: string, purpose: string, keyPoints?: string): Promise<{ body: string; sources: any[] }> => {
+    const prompt = `
+        You are an expert sales copywriter AI. Your task is to write a personalized sales email from scratch for a specific prospect.
+
+        **Prospect Information:**
+        - Name: ${prospect.name}
+        - Company: ${prospect.company}
+        - Title: ${prospect.title || 'Decision Maker'}
+        - AI-Inferred Pain Points: ${prospect.aiAnalysis?.painPoints?.join(', ') || 'N/A'}
+
+        **Email Goal:**
+        - Primary Purpose: "${purpose}"
+        - Tone: ${tone}
+        ${keyPoints ? `- Key Points to Include: "${keyPoints}"` : ''}
+
+        **Instructions:**
+        1. Write a complete, compelling sales email body.
+        2. Address the prospect by their first name, e.g., "Hi ${prospect.name.split(' ')[0]}".
+        3. Subtly weave in information about their company, role, or potential pain points.
+        4. Incorporate the specified key points naturally.
+        5. End with a clear call to action that aligns with the email's purpose.
+        6. Use your search tool if you need to find recent, relevant information about the prospect's company to make the email more impactful.
+        7. Return **only** the generated email body as a single block of HTML, ready to be displayed. Do not include a subject line or any other text.
+    `;
+    try {
+        const ai = getGenAIClient();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                tools: [{googleSearch: {}}]
+            }
+        });
+        const text = response.text;
+        if (!text) {
+            throw new Error("No content generated.");
+        }
+        
+        const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+        return { body: text, sources };
+    } catch (error) {
+        console.error("Error generating workflow email with Gemini API:", error);
+        const body = "Sorry, there was an error generating the content. Please check the console for details.";
+        return { body, sources: [] };
     }
-    
-    return text;
-  } catch (error) {
-    console.error("Error generating content with Gemini API:", error);
-    return "Sorry, there was an error generating the content. Please check the console for details.";
-  }
 };
 
 export const generatePersonalizedEmail = async (template: Template, prospect: Prospect, tone: string): Promise<{ body: string; sources: any[] }> => {
@@ -86,6 +102,7 @@ export const generatePersonalizedEmail = async (template: Template, prospect: Pr
     `;
 
     try {
+        const ai = getGenAIClient();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -141,6 +158,7 @@ export const generateProspectIntelligence = async (prospect: Prospect): Promise<
     `;
     let responseTextForParsing = '';
     try {
+        const ai = getGenAIClient();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -152,11 +170,16 @@ export const generateProspectIntelligence = async (prospect: Prospect): Promise<
         responseTextForParsing = response.text;
         let jsonText = responseTextForParsing.trim();
 
-        // The model might return conversational text. Extract the JSON object.
-        const objStartIndex = jsonText.indexOf('{');
-        const objEndIndex = jsonText.lastIndexOf('}');
-        if (objStartIndex > -1 && objEndIndex > -1) {
-            jsonText = jsonText.substring(objStartIndex, objEndIndex + 1);
+        // The model can return conversational text and markdown. Extract the JSON object.
+        const match = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (match && match[1]) {
+            jsonText = match[1];
+        } else {
+            // Fallback: find the start of the last JSON object in the string, assuming it's the last element.
+            const startIndex = jsonText.lastIndexOf('{');
+            if (startIndex > -1) {
+                jsonText = jsonText.substring(startIndex);
+            }
         }
         
         const intelligence = JSON.parse(jsonText);
@@ -204,6 +227,7 @@ export const generateNextSteps = async (prospect: Prospect): Promise<{ title: st
     `;
 
     try {
+        const ai = getGenAIClient();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -262,6 +286,7 @@ export const findCompaniesAndExecutives = async (city: string, companySize: stri
     `;
     let responseTextForParsing = '';
     try {
+        const ai = getGenAIClient();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -273,11 +298,17 @@ export const findCompaniesAndExecutives = async (city: string, companySize: stri
         responseTextForParsing = response.text;
         let jsonText = responseTextForParsing.trim();
 
-        // The model might return conversational text. Extract the JSON array.
-        const arrayStartIndex = jsonText.indexOf('[');
-        const arrayEndIndex = jsonText.lastIndexOf(']');
-        if (arrayStartIndex > -1 && arrayEndIndex > -1) {
-            jsonText = jsonText.substring(arrayStartIndex, arrayEndIndex + 1);
+        // The model can return conversational text and markdown. Extract the JSON.
+        // First, try to find a JSON code block.
+        const match = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (match && match[1]) {
+            jsonText = match[1];
+        } else {
+            // Fallback: find the start of the last JSON array in the string, assuming it's the last element.
+            const startIndex = jsonText.lastIndexOf('[');
+            if (startIndex > -1) {
+                jsonText = jsonText.substring(startIndex);
+            }
         }
 
         const results = JSON.parse(jsonText);
@@ -330,6 +361,7 @@ export const generateOutreachPlan = async (prospect: ResearchResult): Promise<{ 
     `;
     let responseTextForParsing = '';
     try {
+        const ai = getGenAIClient();
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -341,11 +373,16 @@ export const generateOutreachPlan = async (prospect: ResearchResult): Promise<{ 
         responseTextForParsing = response.text;
         let jsonText = responseTextForParsing.trim();
 
-        // The model might return conversational text. Extract the JSON object.
-        const objStartIndex = jsonText.indexOf('{');
-        const objEndIndex = jsonText.lastIndexOf('}');
-        if (objStartIndex > -1 && objEndIndex > -1) {
-            jsonText = jsonText.substring(objStartIndex, objEndIndex + 1);
+        // The model can return conversational text and markdown. Extract the JSON object.
+        const match = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (match && match[1]) {
+            jsonText = match[1];
+        } else {
+            // Fallback: find the start of the last JSON object in the string, assuming it's the last element.
+            const startIndex = jsonText.lastIndexOf('{');
+            if (startIndex > -1) {
+                jsonText = jsonText.substring(startIndex);
+            }
         }
         
         const plan = JSON.parse(jsonText);
@@ -355,5 +392,150 @@ export const generateOutreachPlan = async (prospect: ResearchResult): Promise<{ 
         console.error("Error generating outreach plan:", error);
         console.error("Original text that failed to parse in generateOutreachPlan:", responseTextForParsing);
         throw new Error("Failed to generate AI-powered outreach plan.");
+    }
+};
+
+const summarySchema = {
+    type: Type.OBJECT,
+    properties: {
+        summary: { type: Type.STRING, description: "A concise, professional summary of the sales conversation, highlighting key topics, customer sentiment, and outcomes." },
+        actionItems: { 
+            type: Type.ARRAY,
+            description: "A list of clear, actionable next steps identified during the call.",
+            items: {
+                type: Type.STRING
+            }
+        },
+    },
+    required: ["summary", "actionItems"]
+};
+
+
+export const summarizeCallTranscript = async (transcript: string): Promise<{ summary: string; actionItems: string[] }> => {
+    const prompt = `
+        You are an expert sales analyst AI. Your task is to analyze the following sales call transcript and produce a structured summary.
+
+        **Transcript:**
+        ${transcript}
+
+        **Instructions:**
+        1.  Generate a concise, professional summary of the conversation. Highlight key topics discussed, the prospect's main pain points or interests, and the overall sentiment.
+        2.  Extract a list of specific, actionable items for the sales representative. If no clear action items are present, return an empty array.
+        3.  Provide your output in the requested JSON format.
+    `;
+    
+    try {
+        const ai = getGenAIClient();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: summarySchema,
+            },
+        });
+        
+        const jsonText = response.text.trim();
+        const result = JSON.parse(jsonText);
+        // Ensure actionItems is always an array
+        if (!Array.isArray(result.actionItems)) {
+            result.actionItems = [];
+        }
+        return result;
+    } catch (error) {
+        console.error("Error summarizing transcript:", error);
+        return {
+            summary: "There was an error generating the call summary. Please review the transcript manually.",
+            actionItems: ["Review transcript for action items."],
+        };
+    }
+};
+
+// FIX: Add missing generateDashboardBriefing function to resolve error in aiService.
+const briefingSchema = {
+    type: Type.OBJECT,
+    properties: {
+        insights: { 
+            type: Type.ARRAY,
+            description: "A list of 2-3 concise, actionable insights for the sales representative based on the provided data.",
+            items: {
+                type: Type.STRING
+            }
+        },
+    },
+    required: ["insights"]
+};
+
+export const generateDashboardBriefing = async (prospects: Prospect[], deals: Deal[]): Promise<{ insights: string[], sources: any[] }> => {
+    const recentProspects = prospects.slice(0, 5).map(p => `- ${p.name} at ${p.company} (Status: ${p.status})`).join('\n');
+    const activeDeals = deals.filter(d => d.status !== 'Won' && d.status !== 'Lost').map(d => `- ${d.name} (Status: ${d.status}, Value: ...)`).join('\n');
+
+    const prompt = `
+        Act as a sales assistant AI. Your task is to analyze the following data and generate a short, actionable daily briefing for a sales representative. Focus on what's most important for them to do today.
+
+        **Recent Prospects:**
+        ${recentProspects || 'None'}
+
+        **Active Deals:**
+        ${activeDeals || 'None'}
+
+        **Instructions:**
+        1.  Identify 2-3 top-priority items. Examples: a new high-value lead, a deal that's been quiet for too long, an upcoming meeting.
+        2.  For each item, create a concise, one-sentence insight.
+        3.  Start each insight with an action word (e.g., "Follow up with...", "Prepare for...", "Engage...").
+        4.  Return the insights in the specified JSON format.
+    `;
+    
+    try {
+        const ai = getGenAIClient();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: briefingSchema,
+            },
+        });
+        
+        const jsonText = response.text.trim();
+        const result = JSON.parse(jsonText);
+        const insights = result.insights || [];
+
+        return { insights, sources: [] };
+    } catch (error) {
+        console.error("Error generating dashboard briefing:", error);
+        return {
+            insights: ["Could not generate AI briefing. Please check your data and try again."],
+            sources: []
+        };
+    }
+};
+
+// FIX: Add missing generateAdHocContent function to resolve error in aiService.
+export const generateAdHocContent = async (contentType: string, prompt: string): Promise<string> => {
+    const fullPrompt = `
+        You are an expert ${contentType} writer for a B2B sales team.
+        Your task is to generate content based on the following user prompt.
+        Your output should be ready to be copy-pasted. For emails, do not include a subject line unless asked.
+
+        **User Prompt:**
+        "${prompt}"
+
+        Generate the content and return it as a single block of text or basic HTML, depending on what is most appropriate for a ${contentType}.
+    `;
+    try {
+        const ai = getGenAIClient();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: fullPrompt,
+        });
+        const text = response.text;
+        if (!text) {
+            throw new Error("No content generated.");
+        }
+        return text;
+    } catch (error) {
+        console.error("Error generating ad-hoc content:", error);
+        return "Sorry, there was an error generating the content. Please check the console for details.";
     }
 };

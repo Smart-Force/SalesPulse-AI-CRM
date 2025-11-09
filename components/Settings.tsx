@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User as UserIcon, Lock, Settings as SettingsIcon, Palette, CreditCard, Bell, Users } from 'lucide-react';
+import { User as UserIcon, Lock, Settings as SettingsIcon, Palette, CreditCard, Bell, Users, Bot, Shield } from 'lucide-react';
 import { ProfileSettings } from './settings/ProfileSettings';
 import { AccountSettings } from './settings/AccountSettings';
 import { SecuritySettings } from './settings/SecuritySettings';
@@ -7,24 +7,36 @@ import { AppearanceSettings } from './settings/AppearanceSettings';
 import { BillingSettings } from './settings/BillingSettings';
 import { NotificationsSettings } from './settings/NotificationsSettings';
 import { TeamSettings } from './settings/TeamSettings';
-import type { SettingsTab, User } from '../types';
+import { AIProviderSettings } from './settings/AIProviderSettings';
+import RolesSettings from './settings/RolesSettings';
+import type { SettingsTab, User, AIProvider, UserRole, ApiKeys, RolePermissions } from '../types';
 
 interface SettingsProps {
     users: User[];
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+    aiProvider: AIProvider;
+    setAiProvider: (provider: AIProvider) => void;
+    currentUser: User;
+    onInviteUser: (name: string, email: string, role: UserRole) => { success: boolean; message: string; };
+    apiKeys: ApiKeys;
+    setApiKeys: (keys: ApiKeys) => void;
+    rolePermissions: RolePermissions;
+    setRolePermissions: (permissions: RolePermissions) => void;
 }
 
 const userSettingsTabs: { id: SettingsTab; name: string; icon: React.ElementType }[] = [
   { id: 'profile', name: 'Profile', icon: UserIcon },
   { id: 'security', name: 'Security', icon: Lock },
-  { id: 'account', name: 'Account', icon: SettingsIcon },
+  { id: 'notifications', name: 'Notifications', icon: Bell },
+  { id: 'appearance', name: 'Appearance', icon: Palette },
 ];
 
-const workspaceSettingsTabs: { id: SettingsTab; name: string; icon: React.ElementType }[] = [
+const workspaceSettingsTabs: { id: SettingsTab; name: string; icon: React.ElementType, adminOnly?: boolean }[] = [
+  { id: 'account', name: 'Account', icon: SettingsIcon },
   { id: 'team', name: 'Team', icon: Users },
-  { id: 'appearance', name: 'Appearance', icon: Palette },
   { id: 'billing', name: 'Billing', icon: CreditCard },
-  { id: 'notifications', name: 'Notifications', icon: Bell },
+  { id: 'ai-provider', name: 'AI Provider', icon: Bot },
+  { id: 'roles', name: 'Roles & Permissions', icon: Shield, adminOnly: true },
 ];
 
 type NavButtonProps = {
@@ -47,22 +59,28 @@ const NavButton: React.FC<NavButtonProps> = ({ tab, isActive, onClick }) => (
   </button>
 );
 
-export const Settings: React.FC<SettingsProps> = ({ users, setUsers }) => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+export const Settings: React.FC<SettingsProps> = ({ users, setUsers, aiProvider, setAiProvider, currentUser, onInviteUser, apiKeys, setApiKeys, rolePermissions, setRolePermissions }) => {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('team');
 
   const renderContent = () => {
     switch (activeTab) {
       case 'profile': return <ProfileSettings />;
       case 'security': return <SecuritySettings />;
       case 'account': return <AccountSettings />;
-      case 'team': return <TeamSettings users={users} setUsers={setUsers} />;
+      case 'team': return <TeamSettings users={users} setUsers={setUsers} currentUser={currentUser} onInviteUser={onInviteUser} />;
       case 'appearance': return <AppearanceSettings />;
       case 'billing': return <BillingSettings />;
       case 'notifications': return <NotificationsSettings />;
+      case 'ai-provider': return <AIProviderSettings currentProvider={aiProvider} onProviderChange={setAiProvider} currentUser={currentUser} apiKeys={apiKeys} onApiKeysSave={setApiKeys} />;
+      case 'roles': return <RolesSettings rolePermissions={rolePermissions} setRolePermissions={setRolePermissions} currentUser={currentUser} />;
       default: return <ProfileSettings />;
     }
   };
   
+  const filteredWorkspaceTabs = workspaceSettingsTabs.filter(tab => 
+      !tab.adminOnly || (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin'))
+  );
+
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">
@@ -83,7 +101,7 @@ export const Settings: React.FC<SettingsProps> = ({ users, setUsers }) => {
              <div>
               <h2 className="px-3 text-xs font-semibold text-gray-500 dark:text-slate-500 uppercase tracking-wider mb-2">Workspace Settings</h2>
               <div className="space-y-1">
-                {workspaceSettingsTabs.map((tab) => (
+                {filteredWorkspaceTabs.map((tab) => (
                   <NavButton key={tab.id} tab={tab} isActive={activeTab === tab.id} onClick={setActiveTab} />
                 ))}
               </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Save, Mail, Linkedin, Phone, Users, BarChart as BarChartIcon, Settings, ArrowRight, Clock, Trash2, Wand2, Loader2, Copy, ExternalLink, MessageSquare, Briefcase, GripVertical, Target, MousePointerClick, MessageSquareReply, Trophy, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Campaign, CampaignStep, Prospect, Template, ProspectList } from '../../types';
-import { generatePersonalizedEmail } from '../../services/geminiService';
+import { generatePersonalizedEmail } from '../../services/aiService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface CampaignDetailModalProps {

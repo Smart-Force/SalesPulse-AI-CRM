@@ -1,92 +1,166 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Login } from './components/Login';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { EmailInbox } from './components/EmailInbox';
 import { Prospects } from './components/Prospects';
 import { Campaigns } from './components/Campaigns';
+import { Workflows } from './components/Workflows';
+import { LeadGeneration } from './components/LeadGeneration';
+import { Products } from './components/Products';
 import { Analytics } from './components/Analytics';
+import { LiveCall } from './components/LiveCall';
 import { Integrations } from './components/Integrations';
 import { Settings } from './components/Settings';
-import { LeadGeneration } from './components/LeadGeneration';
-import { Playbooks } from './components/Playbooks';
-import { Products } from './components/Products';
-import type { View, Prospect, ProspectList, User, Playbook, Template, Product, Deal } from './types';
+import { initialUsers } from './data/users';
 import { initialProspects } from './data/prospects';
 import { initialLists } from './data/lists';
-import { initialUsers } from './data/users';
-import { initialPlaybooks } from './data/playbooks';
-import { templates as initialTemplates } from './data/templates';
-import { initialProducts } from './data/products';
 import { initialDeals } from './data/deals';
+import { initialProducts } from './data/products';
+import { initialWorkflows } from './data/workflows';
+import { initialRolePermissions } from './data/permissions';
+import type { View, User, AIProvider, Prospect, ProspectList, Deal, Product, UserRole, Workflow, RolePermissions, ApiKeys } from './types';
+import { useToasts } from './contexts/ToastContext';
 
-function App() {
-  const [activeView, setActiveView] = useState<View>('dashboard');
-  const [prospects, setProspects] = useState<Prospect[]>(initialProspects);
-  const [prospectLists, setProspectLists] = useState<ProspectList[]>(initialLists);
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [playbooks, setPlaybooks] = useState<Playbook[]>(initialPlaybooks);
-  const [templates] = useState<Template[]>(initialTemplates);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [deals, setDeals] = useState<Deal[]>(initialDeals);
-  const [connectedIntegrations, setConnectedIntegrations] = useState<Set<string>>(new Set(['salesforce', 'slack']));
+const App: React.FC = () => {
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [activeView, setActiveView] = useState<View>('Dashboard');
+    const { addToast } = useToasts();
+    
+    // Global data state
+    const [users, setUsers] = useState<User[]>(initialUsers);
+    const [prospects, setProspects] = useState<Prospect[]>(initialProspects);
+    const [prospectLists, setProspectLists] = useState<ProspectList[]>(initialLists);
+    const [deals, setDeals] = useState<Deal[]>(initialDeals);
+    const [products, setProducts] = useState<Product[]>(initialProducts);
+    const [workflows, setWorkflows] = useState<Workflow[]>(initialWorkflows);
+    
+    const [connectedIntegrations, setConnectedIntegrations] = useState<Set<string>>(new Set(['salesforce']));
+    const [aiProvider, setAiProvider] = useState<AIProvider>('gemini');
+    const [apiKeys, setApiKeys] = useState<ApiKeys>({});
+    const [rolePermissions, setRolePermissions] = useState<RolePermissions>(initialRolePermissions);
 
-  const handleAddProspects = (newProspects: Prospect[]) => {
-    setProspects(prev => [...newProspects, ...prev]);
-    setActiveView('prospects'); // Switch to prospects view after adding
-  };
+    const availableViews = useMemo(() => {
+        if (!currentUser) return [];
+        return rolePermissions[currentUser.role];
+    }, [currentUser, rolePermissions]);
 
-  const toggleIntegration = (integrationName: string, isConnected: boolean) => {
-    setConnectedIntegrations(prev => {
-        const newSet = new Set(prev);
-        if (isConnected) {
-            newSet.add(integrationName.toLowerCase());
-        } else {
-            newSet.delete(integrationName.toLowerCase());
+    useEffect(() => {
+        const savedProvider = localStorage.getItem('aiProvider') as AIProvider;
+        if (savedProvider) {
+            setAiProvider(savedProvider);
         }
-        return newSet;
-    });
-  };
+        try {
+            const savedApiKeys = localStorage.getItem('apiKeys');
+            if (savedApiKeys) {
+                setApiKeys(JSON.parse(savedApiKeys));
+            }
+            const savedPermissions = localStorage.getItem('rolePermissions');
+            if (savedPermissions) {
+                setRolePermissions(JSON.parse(savedPermissions));
+            }
+        } catch (error) {
+            console.error('Failed to parse from localStorage:', error);
+        }
+    }, []);
 
-  const renderView = () => {
-    switch (activeView) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'lead-generation':
-        return <LeadGeneration onAddProspects={handleAddProspects} />;
-      case 'prospects':
-        return <Prospects 
-                 prospects={prospects} 
-                 setProspects={setProspects} 
-                 prospectLists={prospectLists} 
-                 setProspectLists={setProspectLists}
-                 deals={deals}
-                 setDeals={setDeals}
-                 products={products}
-                />;
-      case 'campaigns':
-        return <Campaigns prospects={prospects} connectedIntegrations={connectedIntegrations} prospectLists={prospectLists} />;
-      case 'products':
-        return <Products products={products} setProducts={setProducts} />;
-      case 'email-inbox':
-        return <EmailInbox />;
-      case 'playbooks':
-        return <Playbooks playbooks={playbooks} setPlaybooks={setPlaybooks} templates={templates} />;
-      case 'analytics':
-        return <Analytics />;
-      case 'integrations':
-        return <Integrations connectedIntegrations={connectedIntegrations} onToggleIntegration={toggleIntegration} />;
-      case 'settings':
-        return <Settings users={users} setUsers={setUsers} />;
-      default:
-        return <Dashboard />;
+    const handleSetRolePermissions = (permissions: RolePermissions) => {
+        setRolePermissions(permissions);
+        localStorage.setItem('rolePermissions', JSON.stringify(permissions));
+    };
+
+    const handleSetAiProvider = (provider: AIProvider) => {
+        localStorage.setItem('aiProvider', provider);
+        setAiProvider(provider);
+        addToast(`AI Provider switched to ${provider}`, 'info');
+    };
+
+    const handleSetApiKeys = (keys: ApiKeys) => {
+        setApiKeys(keys);
+        localStorage.setItem('apiKeys', JSON.stringify(keys));
+        addToast('API Keys saved successfully!', 'success');
+    };
+    
+    const handleLogin = (user: User) => {
+        setCurrentUser(user);
+        const userPermissions = rolePermissions[user.role] || [];
+        if (!userPermissions.includes(activeView)) {
+            setActiveView('Dashboard');
+        }
+    };
+
+    const handleLogout = () => {
+        setCurrentUser(null);
+    };
+
+    const handleToggleIntegration = (name: string, isConnected: boolean) => {
+        setConnectedIntegrations(prev => {
+            const newSet = new Set(prev);
+            const lowercasedName = name.toLowerCase();
+            if (isConnected) {
+                newSet.add(lowercasedName);
+            } else {
+                newSet.delete(lowercasedName);
+            }
+            return newSet;
+        });
+        addToast(`${name} ${isConnected ? 'connected' : 'disconnected'}.`, 'success');
+    };
+
+    const handleAddProspects = (newProspects: Prospect[]) => {
+        setProspects(prev => [...newProspects, ...prev]);
+        setActiveView('Prospects');
+        addToast(`${newProspects.length} new prospect(s) added!`, 'success');
+    };
+
+    const handleInviteUser = (name: string, email: string, role: UserRole): { success: boolean; message: string; } => {
+        const newUser: User = {
+            id: `user${Date.now()}`,
+            name,
+            email,
+            role,
+            avatarColor: `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`,
+            initials: name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2),
+        };
+        setUsers(prev => [...prev, newUser]);
+        return { success: true, message: 'User invited successfully!' };
+    };
+
+    const renderView = () => {
+        if (currentUser && !availableViews.includes(activeView)) {
+             return <div className="p-8 text-center text-red-500">Access denied. You do not have permission to view the '{activeView}' page.</div>;
+        }
+        switch (activeView) {
+            case 'Dashboard': return <Dashboard />;
+            case 'Email Inbox': return <EmailInbox />;
+            case 'Prospects': return <Prospects prospects={prospects} setProspects={setProspects} prospectLists={prospectLists} setProspectLists={setProspectLists} deals={deals} setDeals={setDeals} products={products} />;
+            case 'Campaigns': return <Campaigns prospects={prospects} connectedIntegrations={connectedIntegrations} prospectLists={prospectLists} />;
+            case 'Workflows': return <Workflows workflows={workflows} setWorkflows={setWorkflows} prospects={prospects} />;
+            case 'Lead Generation': return <LeadGeneration onAddProspects={handleAddProspects} prospects={prospects} />;
+            case 'Products': return <Products products={products} setProducts={setProducts} />;
+            case 'Analytics': return <Analytics />;
+            case 'Live Call': return <LiveCall prospects={prospects} />;
+            case 'Integrations': return <Integrations connectedIntegrations={connectedIntegrations} onToggleIntegration={handleToggleIntegration} />;
+            case 'Settings': return <Settings users={users} setUsers={setUsers} aiProvider={aiProvider} setAiProvider={handleSetAiProvider} currentUser={currentUser!} onInviteUser={handleInviteUser} apiKeys={apiKeys} setApiKeys={handleSetApiKeys} rolePermissions={rolePermissions} setRolePermissions={handleSetRolePermissions} />;
+            default: return <Dashboard />;
+        }
+    };
+
+    if (!currentUser) {
+        return <Login users={users} onLogin={handleLogin} />;
     }
-  };
 
-  return (
-    <Layout activeView={activeView} setActiveView={setActiveView}>
-      {renderView()}
-    </Layout>
-  );
-}
+    return (
+        <Layout 
+            activeView={activeView} 
+            setActiveView={setActiveView} 
+            currentUser={currentUser} 
+            onLogout={handleLogout}
+            availableViews={availableViews}
+        >
+            {renderView()}
+        </Layout>
+    );
+};
 
 export default App;

@@ -1,130 +1,71 @@
-import React from 'react';
+export type View = 'Dashboard' | 'Email Inbox' | 'Prospects' | 'Campaigns' | 'Lead Generation' | 'Products' | 'Analytics' | 'Live Call' | 'Integrations' | 'Settings' | 'Workflows';
 
-export type View = 'dashboard' | 'lead-generation' | 'email-inbox' | 'playbooks' | 'settings' | 'prospects' | 'campaigns' | 'ai-generator' | 'analytics' | 'business-intelligence' | 'integrations' | 'products';
+// FIX: Add 'Super Admin' to UserRole to resolve type errors in TeamSettings.tsx and RolesSettings.tsx.
+export type UserRole = 'Super Admin' | 'Admin' | 'Manager' | 'Member';
 
-export interface NavItem {
-  name: string;
-  view: View;
-  icon: React.ElementType;
-  badge?: number;
-}
-
-export interface Email {
+export interface User {
   id: string;
-  from: string;
-  to: string;
-  subject: string;
-  preview: string;
-  body: string;
-  time: string;
-  fullTime: string;
-  read: boolean;
-  hasAttachment: boolean;
-  isImportant: boolean;
-  threadCount: number;
-  status: 'sent' | 'delivered' | 'opened' | 'clicked' | 'replied';
-  tracking: {
-      opened: boolean;
-      clicked: boolean;
-      replied: boolean;
-  };
+  name: string;
+  email: string;
+  role: UserRole;
   avatarColor: string;
   initials: string;
-  folder: 'Inbox' | 'Sent' | 'Drafts' | 'Trash';
-  isNew?: boolean;
+  avatarUrl?: string;
 }
 
-
-export interface GeneratorFormState {
-  recipient: string;
-  purpose: string;
-  tone: string;
-  keyPoints: string;
+export interface Template {
+    id: string;
+    name: string;
+    subject: string;
+    body: string;
 }
 
 export type ProspectStatus = 'New' | 'Contacted' | 'Engaged' | 'Meeting' | 'Closed';
 export type ConfidenceScore = 'High' | 'Medium' | 'Low';
 
 export interface ContactHistoryItem {
-  date: string;
-  type: 'Email' | 'Call' | 'Meeting';
-  outcome: string;
-  aiInsight?: string;
-  duration?: string;
+    date: string;
+    type: 'Email' | 'Call' | 'Meeting';
+    outcome: string;
+    aiInsight: string;
+    duration?: string;
 }
 
 export interface Prospect {
-  id: string;
-  name: string;
-  avatarColor: string;
-  initials: string;
-  company: string;
-  email: string;
-  phone?: string;
-  title?: string;
-  status: ProspectStatus;
-  lastContact: string;
-  lastContactDate: Date;
-  tags: string[];
-  dealIds?: string[];
-
-  // Prospect Intelligence Fields
-  isEnriched?: boolean;
-  confidenceScore?: ConfidenceScore;
-  decisionAuthorityScore?: number;
-  linkedInUrl?: string;
-  companyDetails?: {
-    industry?: string;
-    revenue?: string;
-    employeeCount?: string;
-    description?: string;
-  };
-  recentNews?: string[];
-  aiAnalysis?: {
-    communicationStyle?: string;
-    motivations?: string[];
-    painPoints?: string[];
-  };
-  contactHistory?: ContactHistoryItem[];
-  notes?: string;
-  groundingSources?: any[];
-}
-
-
-export interface Template {
-  id: string;
-  name: string;
-  subject: string;
-  body: string;
-}
-
-export interface CampaignStep {
-  id:string;
-  type: 'Email' | 'LinkedIn' | 'WhatsApp' | 'Call' | 'Task';
-  templateId?: string;
-  message?: string;
-  delayDays: number;
-}
-
-export interface Campaign {
-  id: string;
-  name: string;
-  status: 'Active' | 'Draft' | 'Completed';
-  sent: number;
-  opens: number;
-  clicks: number;
-  replies: number;
-  createdDate: string;
-  steps: CampaignStep[];
-  prospectIds: string[];
-  prospectListIds: string[];
-}
-
-export interface ProspectList {
-  id: string;
-  name: string;
-  prospectIds: string[];
-  createdAt: string;
+    id: string;
+    name: string;
+    initials: string;
+    avatarColor: string;
+    company: string;
+    email: string;
+    phone?: string;
+    title?: string;
+    status: ProspectStatus;
+    lastContact: string;
+    lastContactDate: Date;
+    tags: string[];
+    dealIds?: string[];
+    isEnriched: boolean;
+    confidenceScore: ConfidenceScore;
+    decisionAuthorityScore?: number;
+    companyDetails?: {
+        industry: string;
+        revenue: string;
+        employeeCount: string;
+        description?: string;
+    };
+    contactHistory?: ContactHistoryItem[];
+    notes?: string;
+    linkedInUrl?: string;
+    recentNews?: string[];
+    aiAnalysis?: {
+        communicationStyle: string;
+        motivations: string[];
+        painPoints: string[];
+    };
+    groundingSources?: any[];
+    // FIX: Add missing 'source' property to Prospect type to resolve errors in data/prospects.ts.
+    source?: string;
 }
 
 export interface ResearchResult {
@@ -144,7 +85,7 @@ export interface ResearchResult {
     directPhone: string;
     linkedInProfile: string;
     dataConfidenceScore: number;
-    // Sales Enablement fields - initially null
+    // For outreach plan
     recommendedProducts?: string[];
     talkingPoints?: string[];
     personalizedEmail?: string;
@@ -156,6 +97,32 @@ export interface ResearchResult {
     outreachSources?: any[];
 }
 
+
+export interface Email {
+    id: string;
+    from: string;
+    to: string;
+    subject: string;
+    preview: string;
+    body: string;
+    time: string;
+    fullTime: string;
+    read: boolean;
+    hasAttachment: boolean;
+    isImportant: boolean;
+    threadCount: number;
+    status: 'sent' | 'delivered' | 'opened' | 'replied';
+    tracking: {
+        opened: boolean;
+        clicked: boolean;
+        replied: boolean;
+    };
+    avatarColor: string;
+    initials: string;
+    folder: 'Inbox' | 'Sent' | 'Drafts' | 'Trash';
+    isNew?: boolean;
+}
+
 export interface NewProspectData {
     name: string;
     company: string;
@@ -164,79 +131,30 @@ export interface NewProspectData {
     title?: string;
     status: ProspectStatus;
     tags: string[];
+    // FIX: Add 'source' property to allow tracking where a prospect was added from.
+    source?: string;
 }
 
-export type UserRole = 'Admin' | 'Member';
-
-export interface User {
+export interface ProspectList {
     id: string;
     name: string;
-    email: string;
-    role: UserRole;
-    avatarUrl?: string;
-    avatarColor: string;
-    initials: string;
+    prospectIds: string[];
+    createdAt: string;
 }
 
-export type SettingsTab = 'profile' | 'security' | 'account' | 'appearance' | 'billing' | 'notifications' | 'team';
-
-// New Playbook types
-export type PlaybookTriggerType = 'prospect_status_change';
-
-export interface PlaybookTrigger {
-    type: PlaybookTriggerType;
-    value: ProspectStatus;
-}
-
-export type PlaybookActionType = 'generate_and_send_ai_email' | 'send_email_template' | 'wait';
-
-export interface PlaybookAction {
-    id: string;
-    type: PlaybookActionType;
-    // For 'generate_and_send_ai_email'
-    goal?: string;
-    tone?: string;
-    keyPoints?: string;
-    // For 'send_email_template'
-    templateId?: string;
-    // For 'wait'
-    days?: number;
-}
-
-export interface Playbook {
-    id: string;
-    name: string;
-    isActive: boolean;
-    trigger: PlaybookTrigger;
-    actions: PlaybookAction[];
-}
-
-export interface Product {
-  id: string;
-  tier: string;
-  name: string;
-  description: string[];
-  billingType: 'Monthly' | 'One-time';
-  basePrice: number;
-  commissionRate: number; // e.g., 0.25 for 25%
-  negotiatedCommissionRate: number;
-  discountRate: number;
-}
-
-// Deal-related types
 export type DealStatus = 'Proposal' | 'Negotiating' | 'Won' | 'Lost';
 
 export interface DealLineItem {
-    id: string; // Unique ID for this line item instance
+    id: string;
     productId: string;
-    name: string; // Copied from product for display
-    basePrice: number; // Copied from product
+    name: string;
+    basePrice: number;
+    commissionRate: number;
     billingType: 'Monthly' | 'One-time';
-    commissionRate: number; // Base commission rate from product
     negotiatedCommissionRate?: number;
     discountRate?: number;
 }
-
+  
 export interface Deal {
     id: string;
     prospectId: string;
@@ -245,4 +163,92 @@ export interface Deal {
     lineItems: DealLineItem[];
     createdAt: Date;
     updatedAt: Date;
+}
+
+export interface Product {
+    id: string;
+    tier: string;
+    name: string;
+    description: string[];
+    billingType: 'Monthly' | 'One-time';
+    basePrice: number;
+    commissionRate: number;
+    negotiatedCommissionRate: number;
+    discountRate: number;
+}
+
+// FIX: Add 'roles' to SettingsTab to allow for the Roles & Permissions settings page.
+export type SettingsTab = 'profile' | 'security' | 'account' | 'team' | 'appearance' | 'billing' | 'notifications' | 'ai-provider' | 'roles';
+export type AIProvider = 'gemini' | 'openai' | 'anthropic' | 'mock' | 'glm';
+export type ApiKeys = { [key in AIProvider]?: string; };
+
+// FIX: Add missing types for Toast notifications and Role-based permissions.
+export type ToastType = 'success' | 'error' | 'info';
+
+export interface ToastMessage {
+  id: string;
+  message: string;
+  type: ToastType;
+}
+
+export type RolePermissions = {
+  [key in UserRole]: View[];
+};
+
+export interface CampaignStep {
+    id: string;
+    type: 'Email' | 'LinkedIn' | 'Call' | 'Task' | 'WhatsApp';
+    delayDays: number;
+    templateId?: string;
+    message?: string;
+}
+
+export interface Campaign {
+    id: string;
+    name: string;
+    status: 'Active' | 'Draft' | 'Completed';
+    sent: number;
+    opens: number;
+    clicks: number;
+    replies: number;
+    createdDate: string;
+    steps: CampaignStep[];
+    prospectIds: string[];
+    prospectListIds: string[];
+}
+
+export interface Playbook {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  content: string;
+}
+
+export interface TranscriptEntry {
+    speaker: 'user' | 'ai';
+    text: string;
+    isPartial?: boolean;
+}
+
+// Unified Workflow Types
+export type WorkflowStepAction = 
+  | { type: 'sendTemplate'; templateId: string }
+  | { type: 'sendAIEmail'; tone: string; purpose: string; keyPoints?: string }
+  | { type: 'createTask'; taskDescription: string }
+  | { type: 'wait'; days: number };
+
+export interface WorkflowStep {
+    id: string;
+    action: WorkflowStepAction;
+}
+
+export interface Workflow {
+  id: string;
+  name: string;
+  trigger: {
+    type: 'statusChange';
+    status: ProspectStatus;
+  };
+  steps: WorkflowStep[];
 }

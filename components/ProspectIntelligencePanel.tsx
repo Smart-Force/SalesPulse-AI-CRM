@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Prospect, ConfidenceScore, ContactHistoryItem, Deal, DealStatus, Product } from '../types';
 import { X, Bot, Zap, Building, BarChart, UserCheck, MessageSquare, Lightbulb, TrendingUp, Link, Loader2, Check, ExternalLink, BookUser, Mail, Phone, Calendar, Sparkles, ChevronRight, Wand2, ClipboardEdit, PhoneCall, Plus, Clock, Save, Handshake, DollarSign, ChevronDown, Edit } from 'lucide-react';
-import { generateProspectIntelligence, generateNextSteps } from '../services/geminiService';
+import { generateProspectIntelligence, generateNextSteps } from '../services/aiService';
 import DealBuilderModal from './modals/DealBuilderModal';
 
 interface PanelProps {
@@ -380,7 +380,7 @@ const ProspectIntelligencePanel: React.FC<PanelProps> = ({ prospect, onClose, on
                                             <div className="font-semibold text-gray-800 dark:text-slate-200">Revenue:</div><div className="text-gray-600 dark:text-slate-400">{prospect.companyDetails?.revenue} (est.)</div>
                                             <div className="font-semibold text-gray-800 dark:text-slate-200">Employees:</div><div className="text-gray-600 dark:text-slate-400">{prospect.companyDetails?.employeeCount}</div>
                                         </div>
-                                        <div>
+                                        <div className="prospect-details">
                                             <h4 className="font-semibold text-gray-800 dark:text-slate-200 mt-4 mb-2">Recent News & Signals</h4>
                                             <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-slate-400">
                                                 {prospect.recentNews?.map((item, i) => <li key={i}>{item}</li>)}
