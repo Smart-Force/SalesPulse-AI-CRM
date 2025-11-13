@@ -8,6 +8,7 @@ export const allViews: View[] = [
     'Workflows',
     'Lead Generation', 
     'Playbooks',
+    'Training Center',
     'AI Generator',
     'Products', 
     'Analytics', 
@@ -15,7 +16,7 @@ export const allViews: View[] = [
     'Integrations', 
     'Settings',
     // Granular settings views
-    'Settings - Team', 'Settings - AI Provider', 'Settings - Roles', 'Settings - Billing'
+    'Settings - Team', 'Settings - AI Provider', 'Settings - Roles', 'Settings - Billing', 'Settings - Certificates'
 ];
 
 const fullAccess: PermissionAction = { view: true, create: true, edit: true, delete: true };
@@ -24,13 +25,14 @@ const noAccess: PermissionAction = { view: false, create: false, edit: false, de
 
 const createPermissionsFromViews = (
     views: View[], 
-    defaultAccess: PermissionAction = fullAccess
+    defaultAccess: Partial<PermissionAction> = fullAccess
 ): { [key in View]?: Partial<PermissionAction> } => {
     const permissions: { [key in View]?: Partial<PermissionAction> } = {};
     for (const view of allViews) {
         if (views.includes(view)) {
             // Apply read-only for specific views, otherwise use the default
-            permissions[view] = (view === 'Dashboard' || view === 'Analytics' || view === 'Playbooks') ? readOnly : defaultAccess;
+            const isReadOnlyView = ['Dashboard', 'Analytics', 'Playbooks'].includes(view);
+            permissions[view] = isReadOnlyView ? readOnly : { ...fullAccess, ...defaultAccess };
         } else {
             permissions[view] = noAccess;
         }
@@ -55,9 +57,11 @@ export const initialRolePermissions: RolePermissions = {
         'Live Call', 
         'Integrations', 
         'Playbooks',
+        'Training Center',
         'AI Generator',
         'Settings',
         'Settings - Team', // Manager can view team by default
+        'Settings - Certificates',
     ]),
     'Member': createPermissionsFromViews(
         [
@@ -68,10 +72,17 @@ export const initialRolePermissions: RolePermissions = {
             'Workflows',
             'Live Call',
             'Playbooks',
+            'Training Center',
             'AI Generator',
             'Settings',
         ],
-        // Members get read-only access to most things by default
-        { view: true, create: false, edit: false, delete: false } 
+        // Members get read-only access to most things by default, but can create/edit some.
+        { view: true, create: true, edit: true, delete: false } 
     ),
 };
+
+// Explicitly set Training Center permissions
+initialRolePermissions['Super Admin']['Training Center'] = fullAccess;
+initialRolePermissions['Admin']['Training Center'] = fullAccess;
+initialRolePermissions['Manager']['Training Center'] = fullAccess;
+initialRolePermissions['Member']['Training Center'] = readOnly;

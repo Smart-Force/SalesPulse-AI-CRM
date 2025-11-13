@@ -1,10 +1,12 @@
+// FIX: Add missing views for Playbooks, AI Generator, and granular settings.
 export type View =
   | 'Dashboard' | 'Email Inbox' | 'Prospects' | 'Campaigns'
   | 'Lead Generation' | 'Products' | 'Analytics' | 'Live Call'
-  | 'Integrations' | 'Settings' | 'Workflows' | 'Playbooks' | 'AI Generator'
+  | 'Integrations' | 'Settings' | 'Workflows' | 'Playbooks' | 'AI Generator' | 'Training Center'
   // Granular settings views for permissions
-  | 'Settings - Team' | 'Settings - AI Provider' | 'Settings - Roles' | 'Settings - Billing';
+  | 'Settings - Team' | 'Settings - AI Provider' | 'Settings - Roles' | 'Settings - Billing' | 'Settings - Certificates';
 
+// FIX: Add 'Super Admin' to UserRole to resolve type errors in TeamSettings.tsx and RolesSettings.tsx.
 export type UserRole = 'Super Admin' | 'Admin' | 'Manager' | 'Member';
 
 export interface User {
@@ -15,6 +17,9 @@ export interface User {
   avatarColor: string;
   initials: string;
   avatarUrl?: string;
+  trainingProgress?: { [resourceId: string]: 'completed' };
+  isMentor?: boolean;
+  isSeekingMentorship?: boolean;
 }
 
 export interface Template {
@@ -33,6 +38,7 @@ export interface ContactHistoryItem {
     outcome: string;
     aiInsight: string;
     duration?: string;
+    // For call summaries
     title?: string;
     summary?: string;
     transcript?: string;
@@ -71,6 +77,7 @@ export interface Prospect {
         painPoints: string[];
     };
     groundingSources?: any[];
+    // FIX: Add missing 'source' property to Prospect type to resolve errors in data/prospects.ts.
     source?: string;
 }
 
@@ -137,6 +144,7 @@ export interface NewProspectData {
     title?: string;
     status: ProspectStatus;
     tags: string[];
+    // FIX: Add 'source' property to allow tracking where a prospect was added from.
     source?: string;
 }
 
@@ -182,10 +190,12 @@ export interface Product {
     discountRate: number;
 }
 
-export type SettingsTab = 'profile' | 'security' | 'team' | 'ai-provider' | 'billing';
+// FIX: Add 'roles' to SettingsTab to allow for the Roles & Permissions settings page.
+export type SettingsTab = 'profile' | 'security' | 'account' | 'team' | 'appearance' | 'billing' | 'notifications' | 'ai-provider' | 'roles' | 'certificates';
 export type AIProvider = 'gemini' | 'openai' | 'anthropic' | 'mock' | 'glm';
 export type ApiKeys = { [key in AIProvider]?: string; };
 
+// FIX: Add missing types for Toast notifications and Role-based permissions.
 export type ToastType = 'success' | 'error' | 'info';
 
 export interface ToastMessage {
@@ -194,6 +204,7 @@ export interface ToastMessage {
   type: ToastType;
 }
 
+// FIX: Add PermissionAction interface for granular permissions.
 export interface PermissionAction {
   view: boolean;
   create: boolean;
@@ -201,6 +212,7 @@ export interface PermissionAction {
   delete: boolean;
 }
 
+// FIX: Update RolePermissions to map views to permission actions.
 export type RolePermissions = {
   [key in UserRole]: {
     [key in View]?: Partial<PermissionAction>;
@@ -263,4 +275,112 @@ export interface Workflow {
     status: ProspectStatus;
   };
   steps: WorkflowStep[];
+}
+
+export interface QuizQuestion {
+    question: string;
+    options: string[];
+    correctAnswer: number; // index of the correct option
+}
+
+export interface QuizContent {
+    questions: QuizQuestion[];
+}
+
+export type TrainingResourceType = 
+  | 'video' 
+  | 'article' 
+  | 'quiz' 
+  | 'pdf' 
+  | 'word' 
+  | 'presentation' 
+  | 'excel' 
+  | 'audio' 
+  | 'image' 
+  | 'html' 
+  | 'link' 
+  | 'archive';
+
+export interface TrainingResource {
+    id: string;
+    type: TrainingResourceType;
+    title: string;
+    duration?: string; // e.g., '5 min read', '10 min video'
+    content: string | QuizContent; // URL for files, HTML for article, or quiz object
+    relatedPlaybookIds?: string[];
+    isCompleted?: boolean; // For tracking user progress
+    // Optional fields for different resource types
+    pages?: number;
+    slides?: number;
+    fileSize?: string;
+}
+
+export type TrainingModuleDifficulty = 'Beginner' | 'Intermediate' | 'Advanced';
+
+export interface TrainingModule {
+    id: string;
+    title: string;
+    description: string;
+    resources: TrainingResource[];
+    // Hierarchical structure
+    parentId?: string;
+    // Metadata
+    duration?: string;
+    difficulty?: TrainingModuleDifficulty;
+    prerequisites?: string[]; // Array of module IDs
+    tags?: string[];
+    // Advanced features
+    isTemplate?: boolean;
+    version: number;
+    lastUpdatedAt: string; // ISO string
+    availability?: {
+        from?: string; // ISO string
+        until?: string; // ISO string
+    };
+}
+
+export interface CertificateSettings {
+    proctorName: string;
+    organizationName: string;
+    issueDate: string;
+    certificateId: string;
+    customMessage: string;
+    includeSignature: boolean;
+    logoUrl: string | null;
+    logoPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center' | 'bottom-center';
+    logoSize: 'small' | 'medium' | 'large';
+}
+
+export interface DiscussionReply {
+  id: string;
+  authorId: string;
+  timestamp: string;
+  content: string;
+}
+
+export interface DiscussionThread {
+  id: string;
+  moduleId: string;
+  title: string;
+  authorId: string;
+  timestamp: string;
+  content: string;
+  replies: DiscussionReply[];
+  isNew?: boolean;
+}
+
+export interface GroupMessage {
+    id: string;
+    authorId: string;
+    timestamp: string;
+    content: string;
+}
+
+export interface StudyGroup {
+    id: string;
+    name: string;
+    description: string;
+    memberIds: string[];
+    messages: GroupMessage[];
+    isNew?: boolean;
 }

@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Package, PlusCircle, Percent, Edit, Trash2, Upload, Download } from 'lucide-react';
 import type { Product } from '../types';
-import AddProductModal from './modals/AddProductModal';
+import AddProductModal from '../../components/modals/AddProductModal';
 import { usePermissions } from '../contexts/PermissionContext';
 
 type ProductFormData = Omit<Product, 'negotiatedCommissionRate' | 'discountRate'> & { id?: string };

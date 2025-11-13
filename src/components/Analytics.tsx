@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart, FunnelChart, Funnel, LabelList, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
-import { DollarSign, Zap, Clock, Trophy, ArrowUp, ArrowDown, Target } from 'lucide-react';
+import { DollarSign, Zap, Clock, Trophy, ArrowUp, ArrowDown } from 'lucide-react';
 import { salesPerformanceData, leaderboardData, dealSourceData, recentDealsData } from '../data/analyticsData';
 import type { Prospect, Deal, ProspectStatus } from '../types';
 

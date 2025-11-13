@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Prospect, ConfidenceScore, ContactHistoryItem, Deal, DealStatus, Product } from '../types';
+// FIX: Add PhoneCall icon for 'Live Call Practice' history items
 import { X, Bot, Zap, Building, BarChart, UserCheck, MessageSquare, Lightbulb, TrendingUp, Link, Loader2, Check, ExternalLink, BookUser, Mail, Phone, Calendar, Sparkles, ChevronRight, Wand2, ClipboardEdit, PhoneCall, Plus, Clock, Save, Handshake, DollarSign, ChevronDown, Edit } from 'lucide-react';
 import { generateProspectIntelligence, generateNextSteps } from '../services/aiService';
 import DealBuilderModal from './modals/DealBuilderModal';
@@ -62,6 +63,8 @@ const interactionIcons: { [key in ContactHistoryItem['type']]: React.ElementType
     Email: Mail,
     Call: Phone,
     Meeting: Calendar,
+    // FIX: Add missing 'Live Call Practice' icon to resolve type error.
+    'Live Call Practice': PhoneCall,
 };
 
 interface Suggestion {

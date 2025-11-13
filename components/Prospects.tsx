@@ -7,6 +7,7 @@ import AddProspectModal from './modals/AddProspectModal';
 import { Prospect, ProspectStatus, ConfidenceScore, ContactHistoryItem, NewProspectData, ProspectList, Deal, Product } from '../types';
 import ProspectIntelligencePanel from './ProspectIntelligencePanel';
 import { generateProspectIntelligence } from '../services/aiService';
+import { useToasts } from '../contexts/ToastContext';
 
 const statusColors: Record<ProspectStatus, string> = {
   'New': 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300',
@@ -44,7 +45,9 @@ export const Prospects: React.FC<ProspectsProps> = ({ prospects, setProspects, p
     const [searchTerm, setSearchTerm] = useState('');
     const [viewingProspect, setViewingProspect] = useState<Prospect | null>(null);
     const [enrichingProspectIds, setEnrichingProspectIds] = useState<string[]>([]);
+    const [isBulkEnriching, setIsBulkEnriching] = useState(false);
     const [activeView, setActiveView] = useState<'list' | 'board'>('list');
+    const { addToast } = useToasts();
 
     const [statusFilter, setStatusFilter] = useState<ProspectStatus | 'All'>('All');
     const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceScore | 'All'>('All');
@@ -175,6 +178,86 @@ export const Prospects: React.FC<ProspectsProps> = ({ prospects, setProspects, p
             setEnrichingProspectIds(prev => prev.filter(id => id !== prospectId));
         }
     };
+
+    const handleBulkEnrich = async () => {
+        setIsBulkEnriching(true);
+
+        const prospectsToEnrich = selectedProspects
+            .map(id => prospects.find(p => p.id === id))
+            .filter((p): p is Prospect => !!p && !p.isEnriched);
+
+        if (prospectsToEnrich.length === 0) {
+            addToast(`${selectedProspects.length} prospect(s) selected, but all are already enriched.`, 'info');
+            setIsBulkEnriching(false);
+            return;
+        }
+
+        const skippedCount = selectedProspects.length - prospectsToEnrich.length;
+        addToast(`Enriching ${prospectsToEnrich.length} prospect(s)... This may take a moment.`, 'info');
+
+        try {
+            const enrichmentPromises = prospectsToEnrich.map(async (prospect) => {
+                try {
+                    const { intelligence: aiData, sources } = await generateProspectIntelligence(prospect);
+                    const enrichedData: Partial<Prospect> = {
+                        isEnriched: true,
+                        confidenceScore: ['High', 'Medium'][Math.floor(Math.random() * 2)] as ConfidenceScore,
+                        decisionAuthorityScore: Math.floor(Math.random() * 4) + 7,
+                        linkedInUrl: `https://linkedin.com/in/${prospect.name.toLowerCase().replace(' ','-')}`,
+                        companyDetails: {
+                            ...prospect.companyDetails,
+                            description: aiData.companyDescription,
+                            industry: 'Technology',
+                            revenue: `$${Math.floor(Math.random() * 50) + 10}M`,
+                            employeeCount: `${Math.floor(Math.random() * 300) + 50}`,
+                        },
+                        recentNews: aiData.recentNews,
+                        aiAnalysis: {
+                            communicationStyle: aiData.communicationStyle,
+                            motivations: aiData.motivations,
+                            painPoints: aiData.painPoints,
+                        },
+                        contactHistory: aiData.contactHistory,
+                        groundingSources: sources,
+                    };
+                    return { ...prospect, ...enrichedData };
+                } catch (error) {
+                    console.error(`Failed to enrich prospect ${prospect.id}:`, error);
+                    return prospect.id; // Return ID on failure
+                }
+            });
+
+            const enrichedResults = await Promise.all(enrichmentPromises);
+            
+            const successfullyEnriched = enrichedResults.filter((p): p is Prospect => typeof p === 'object' && p !== null);
+            const failedIds = enrichedResults.filter((p): p is string => typeof p === 'string');
+
+            if (successfullyEnriched.length > 0) {
+                setProspects(currentProspects => {
+                    const updatedProspectsMap = new Map(successfullyEnriched.map(p => [p.id, p]));
+                    return currentProspects.map(p => updatedProspectsMap.get(p.id) || p);
+                });
+            }
+
+            let successMessage = `${successfullyEnriched.length} prospect(s) enriched successfully.`;
+            if (skippedCount > 0) {
+                successMessage += ` ${skippedCount} were skipped.`;
+            }
+            addToast(successMessage, 'success');
+
+            if (failedIds.length > 0) {
+                addToast(`${failedIds.length} prospect(s) failed to enrich. See console for details.`, 'error');
+            }
+
+        } catch (error) {
+            console.error("Bulk enrichment failed:", error);
+            addToast('An unexpected error occurred during bulk enrichment.', 'error');
+        } finally {
+            setSelectedProspects([]);
+            setIsBulkEnriching(false);
+        }
+    };
+
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
@@ -526,7 +609,7 @@ export const Prospects: React.FC<ProspectsProps> = ({ prospects, setProspects, p
                             {selectedProspects.length > 0 ? (
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{selectedProspects.length} selected</span>
-                                    <div className="flex items-center space-x-2">
+                                    <div className="flex items-center space-x-2 flex-wrap gap-2">
                                         <div className="relative">
                                             <button onClick={() => setStatusMenuOpen(!isStatusMenuOpen)} className="flex items-center px-3 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600">
                                                 <Edit className="h-4 w-4 mr-2" /> Change Status <ChevronDown className="h-4 w-4 ml-1 -mr-1" />
@@ -535,6 +618,14 @@ export const Prospects: React.FC<ProspectsProps> = ({ prospects, setProspects, p
                                         </div>
                                         <button onClick={() => setAddToListModalOpen(true)} className="flex items-center px-3 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600"><List className="h-4 w-4 mr-2" /> Add to List</button>
                                         <button onClick={() => setTaggingModalOpen(true)} className="flex items-center px-3 py-1.5 text-sm bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-slate-600"><Tag className="h-4 w-4 mr-2" /> Add Tags</button>
+                                        <button 
+                                            onClick={handleBulkEnrich} 
+                                            disabled={isBulkEnriching}
+                                            className="flex items-center px-3 py-1.5 text-sm bg-blue-50 dark:bg-blue-900/50 text-blue-600 border border-blue-200 dark:border-blue-500/20 rounded-md shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900 disabled:opacity-50 disabled:cursor-wait"
+                                        >
+                                            {isBulkEnriching ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+                                            {isBulkEnriching ? 'Enriching...' : 'Enrich with AI'}
+                                        </button>
                                         <button onClick={handleDeleteSelected} className="flex items-center px-3 py-1.5 text-sm bg-red-50 dark:bg-red-500/10 text-red-600 border border-red-200 dark:border-red-500/20 rounded-md shadow-sm hover:bg-red-100 dark:hover:bg-red-500/20"><Trash2 className="h-4 w-4 mr-2" /> Delete</button>
                                     </div>
                                 </div>

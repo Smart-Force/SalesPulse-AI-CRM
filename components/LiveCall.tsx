@@ -55,6 +55,8 @@ type CallState = 'idle' | 'requesting_mic' | 'connecting' | 'live' | 'ending' | 
 
 interface LiveCallProps {
   prospects: Prospect[];
+  // FIX: Add setProspects to props to allow updating prospect history
+  setProspects: React.Dispatch<React.SetStateAction<Prospect[]>>;
 }
 
 export const LiveCall: React.FC<LiveCallProps> = ({ prospects }) => {

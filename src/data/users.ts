@@ -8,6 +8,7 @@ export const initialUsers: User[] = [
     role: 'Super Admin',
     avatarColor: '#ef4444',
     initials: 'ES',
+    isMentor: true,
   },
   {
     id: 'user1',
@@ -16,6 +17,7 @@ export const initialUsers: User[] = [
     role: 'Admin',
     avatarColor: '#3b82f6',
     initials: 'JD',
+    isMentor: true,
   },
   {
     id: 'user2',
@@ -32,5 +34,6 @@ export const initialUsers: User[] = [
     role: 'Member',
     avatarColor: '#f59e0b',
     initials: 'BW',
+    isSeekingMentorship: true,
   },
 ];

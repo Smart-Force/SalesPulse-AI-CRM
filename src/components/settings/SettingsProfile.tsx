@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../../components/ui/Card';
 import { Sun, Moon, UploadCloud, Loader2 } from 'lucide-react';
 import { useToasts } from '../../contexts/ToastContext';
 
@@ -103,11 +103,4 @@ export const SettingsProfile: React.FC = () => {
                 </div>
             </CardContent>
             <CardFooter className="border-t dark:border-slate-700 pt-6 flex justify-end">
-                <button onClick={handleSave} disabled={isSaving} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center disabled:opacity-70 disabled:cursor-not-allowed">
-                    {isSaving && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
-                    {isSaving ? 'Saving...' : 'Save All Changes'}
-                </button>
-            </CardFooter>
-        </Card>
-    );
-};
+                <button onClick={handleSave} disabled={isSaving} className="bg-blue-600 text-white font-

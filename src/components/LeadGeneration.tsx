@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Telescope, Search, Loader2, Globe, Briefcase, Building, Bot, Wand2, Copy, Check, Mail, Linkedin, Users, Hash, UserPlus, ExternalLink, Phone, ChevronDown, ChevronRight, BarChart, Link, Download } from 'lucide-react';
 import type { ResearchResult, Prospect, ConfidenceScore } from '../types';
 import { findCompaniesAndExecutives, generateOutreachPlan } from '../services/aiService';
 import { useToasts } from '../contexts/ToastContext';
-import { Skeleton } from './ui/Skeleton';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { usePermissions } from '../contexts/PermissionContext';
 
 interface LeadGenerationProps {

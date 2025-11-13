@@ -100,10 +100,10 @@ export const EmailInbox: React.FC = () => {
                     <div className="flex items-center justify-between mt-1">
                         <p className={`text-sm truncate pr-2 ${!email.read ? 'text-gray-800 dark:text-slate-200' : 'text-gray-600 dark:text-slate-400'}`}>{email.subject}</p>
                         <div className="flex items-center space-x-1.5 flex-shrink-0">
-                            {/* Fix: Wrapped icons in a span with a title for tooltip, as title prop is not supported directly. */}
-                            {email.tracking.opened && <span title="Opened"><MailOpen className="h-4 w-4 text-gray-400 dark:text-slate-500" /></span>}
-                            {email.tracking.clicked && <span title="Clicked"><MousePointerClick className="h-4 w-4 text-green-500" /></span>}
-                            {email.tracking.replied && <span title="Replied"><Reply className="h-4 w-4 text-blue-500" /></span>}
+                            {/* FIX: Wrapped icons in a div with a title for tooltip, as title prop is not supported directly. */}
+                            {email.tracking.opened && <div title="Opened"><MailOpen className="h-4 w-4 text-gray-400 dark:text-slate-500" /></div>}
+                            {email.tracking.clicked && <div title="Clicked"><MousePointerClick className="h-4 w-4 text-green-500" /></div>}
+                            {email.tracking.replied && <div title="Replied"><Reply className="h-4 w-4 text-blue-500" /></div>}
                         </div>
                     </div>
                     <p className="text-sm text-gray-500 dark:text-slate-500 truncate">{email.preview}</p>

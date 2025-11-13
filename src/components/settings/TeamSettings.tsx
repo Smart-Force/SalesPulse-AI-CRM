@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../../components/ui/Card';
 import { PlusCircle, Trash2, Loader2, Users, Shield, LayoutGrid, Cog } from 'lucide-react';
 import type { User, UserRole, RolePermissions, View } from '../../types';
-import InviteMemberModal from '../modals/InviteMemberModal';
-import ConfirmDeleteModal from '../modals/ConfirmDeleteModal';
+import InviteMemberModal from '../../../components/modals/InviteMemberModal';
+import ConfirmDeleteModal from '../../../components/modals/ConfirmDeleteModal';
 import { useToasts } from '../../contexts/ToastContext';
 import { usePermissions } from '../../contexts/PermissionContext';
 import RolesSettings from './RolesSettings';

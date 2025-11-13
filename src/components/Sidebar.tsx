@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { 
-    LayoutDashboard, Wand2, Inbox, Users, Target, Telescope, Package, BarChart2, Phone, Zap, Settings, Rocket, GitFork, BookOpen
+    LayoutDashboard, Wand2, Inbox, Users, Target, Telescope, Package, BarChart2, Phone, Zap, Settings, Rocket, GitFork, BookOpen, GraduationCap
 } from 'lucide-react';
 import { View } from '../types';
 
@@ -21,6 +21,8 @@ const mainNav: { view: View; icon: React.ElementType }[] = [
 const toolsNav: { view: View; icon: React.ElementType }[] = [
     { view: 'Lead Generation', icon: Telescope },
     { view: 'Playbooks', icon: BookOpen },
+    // FIX: Add missing 'Training Center' to the tools navigation.
+    { view: 'Training Center', icon: GraduationCap },
     { view: 'AI Generator', icon: Wand2 },
     { view: 'Products', icon: Package },
     { view: 'Analytics', icon: BarChart2 },
@@ -32,7 +34,13 @@ const generalNav: { view: View; icon: React.ElementType }[] = [
     { view: 'Settings', icon: Settings },
 ];
 
-const NavButton = ({ view, icon: Icon, activeView, setActiveView }: { view: View, icon: React.ElementType, activeView: View, setActiveView: (v: View) => void }) => (
+// FIX: Refactor NavButton to be a standard React.FC with destructured props to resolve a TypeScript error where the 'key' prop was incorrectly being assigned to the component's props type.
+const NavButton: React.FC<{
+    view: View;
+    icon: React.ElementType;
+    activeView: View;
+    setActiveView: (v: View) => void;
+}> = ({ view, icon: Icon, activeView, setActiveView }) => (
     <button
         onClick={() => setActiveView(view)}
         className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${

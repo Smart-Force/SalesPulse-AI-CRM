@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { MoreVertical, Search, Trash2, Tag, PlusCircle, Phone, Briefcase, CheckCircle, AlertCircle, HelpCircle, Zap, Loader2, ArrowUp, ArrowDown, Edit, ChevronDown, ListPlus, List, Users, LayoutGrid, Upload, Download } from 'lucide-react';
-import AddToListModal from './modals/AddToListModal';
-import TaggingModal from './modals/TaggingModal';
-import AddProspectModal from './modals/AddProspectModal';
-import { Prospect, ProspectStatus, ConfidenceScore, ContactHistoryItem, NewProspectData, ProspectList, Deal, Product } from '../types';
-import ProspectIntelligencePanel from './ProspectIntelligencePanel';
+import AddToListModal from '../../components/modals/AddToListModal';
+import TaggingModal from '../../components/modals/TaggingModal';
+import AddProspectModal from '../../components/modals/AddProspectModal';
+import { Prospect, ProspectStatus, ConfidenceScore, ContactHistoryItem, NewProspectData, ProspectList, Deal, Product } from '../../types';
+import ProspectIntelligencePanel from '../../components/ProspectIntelligencePanel';
 import { generateProspectIntelligence } from '../services/aiService';
 import { usePermissions } from '../contexts/PermissionContext';
 

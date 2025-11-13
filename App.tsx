@@ -12,6 +12,9 @@ import { Analytics } from './components/Analytics';
 import { LiveCall } from './components/LiveCall';
 import { Integrations } from './components/Integrations';
 import { Settings } from './components/Settings';
+import { Playbooks } from './components/Playbooks';
+import { TrainingCenter } from './components/TrainingCenter';
+import { AIGenerator } from './components/AIGenerator';
 import { initialUsers } from './data/users';
 import { initialProspects } from './data/prospects';
 import { initialLists } from './data/lists';
@@ -19,8 +22,23 @@ import { initialDeals } from './data/deals';
 import { initialProducts } from './data/products';
 import { initialWorkflows } from './data/workflows';
 import { initialRolePermissions } from './data/permissions';
-import type { View, User, AIProvider, Prospect, ProspectList, Deal, Product, UserRole, Workflow, RolePermissions, ApiKeys } from './types';
+import { initialTrainingModules } from './data/training';
+import { initialDiscussionThreads, initialStudyGroups } from './data/social';
+import type { View, User, AIProvider, Prospect, ProspectList, Deal, Product, UserRole, Workflow, RolePermissions, ApiKeys, TrainingModule, CertificateSettings, DiscussionThread, StudyGroup } from './types';
 import { useToasts } from './contexts/ToastContext';
+import { PermissionContext } from './contexts/PermissionContext';
+
+const initialCertificateSettings: CertificateSettings = {
+    proctorName: 'Training Director',
+    organizationName: 'SalesPulse AI Academy',
+    issueDate: new Date().toISOString().split('T')[0],
+    certificateId: `CERT-${new Date().getFullYear()}-001`,
+    customMessage: "For demonstrating excellence in professional sales development.",
+    includeSignature: true,
+    logoUrl: null,
+    logoPosition: 'top-right',
+    logoSize: 'medium',
+};
 
 const App: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -34,20 +52,23 @@ const App: React.FC = () => {
     const [deals, setDeals] = useState<Deal[]>(initialDeals);
     const [products, setProducts] = useState<Product[]>(initialProducts);
     const [workflows, setWorkflows] = useState<Workflow[]>(initialWorkflows);
+    const [trainingModules, setTrainingModules] = useState<TrainingModule[]>(initialTrainingModules);
+    const [discussionThreads, setDiscussionThreads] = useState<DiscussionThread[]>(initialDiscussionThreads);
+    const [studyGroups, setStudyGroups] = useState<StudyGroup[]>(initialStudyGroups);
     
     const [connectedIntegrations, setConnectedIntegrations] = useState<Set<string>>(new Set(['salesforce']));
     const [aiProvider, setAiProvider] = useState<AIProvider>('gemini');
     const [apiKeys, setApiKeys] = useState<ApiKeys>({});
     const [rolePermissions, setRolePermissions] = useState<RolePermissions>(initialRolePermissions);
+    const [preselectedPlaybookId, setPreselectedPlaybookId] = useState<string | null>(null);
+    const [certificateSettings, setCertificateSettings] = useState<CertificateSettings>(initialCertificateSettings);
 
     const availableViews = useMemo(() => {
         if (!currentUser) return [];
-        const permissions = rolePermissions[currentUser.role];
-        if (!permissions) return [];
-        // FIX: availableViews should be an array of View strings from the permissions object, not the object itself. This resolves multiple type errors.
-        return Object.entries(permissions)
-            .filter(([, perms]) => perms?.view)
-            .map(([view]) => view as View);
+        const userPermissions = rolePermissions[currentUser.role] || {};
+        // FIX: Use Object.keys and filter to correctly type the available views and avoid errors with Object.entries type inference.
+        return (Object.keys(userPermissions) as View[])
+            .filter(view => userPermissions[view]?.view);
     }, [currentUser, rolePermissions]);
 
     useEffect(() => {
@@ -63,6 +84,10 @@ const App: React.FC = () => {
             const savedPermissions = localStorage.getItem('rolePermissions');
             if (savedPermissions) {
                 setRolePermissions(JSON.parse(savedPermissions));
+            }
+            const savedCertSettings = localStorage.getItem('certificateSettings');
+            if (savedCertSettings) {
+                setCertificateSettings(JSON.parse(savedCertSettings));
             }
         } catch (error) {
             console.error('Failed to parse from localStorage:', error);
@@ -84,6 +109,11 @@ const App: React.FC = () => {
         setApiKeys(keys);
         localStorage.setItem('apiKeys', JSON.stringify(keys));
         addToast('API Keys saved successfully!', 'success');
+    };
+
+    const handleSetCertificateSettings = (settings: CertificateSettings) => {
+        setCertificateSettings(settings);
+        localStorage.setItem('certificateSettings', JSON.stringify(settings));
     };
     
     const handleLogin = (user: User) => {
@@ -132,6 +162,27 @@ const App: React.FC = () => {
         return { success: true, message: 'User invited successfully!' };
     };
 
+    const handleSelectPlaybook = (playbookId: string) => {
+        setPreselectedPlaybookId(playbookId);
+        setActiveView('Playbooks');
+    };
+    
+    const handleUpdateUserTrainingProgress = (userId: string, resourceId: string) => {
+        const updateUser = (user: User) => ({
+            ...user,
+            trainingProgress: {
+                ...user.trainingProgress,
+                [resourceId]: 'completed' as const
+            }
+        });
+
+        setUsers(prevUsers => prevUsers.map(u => u.id === userId ? updateUser(u) : u));
+        
+        if (currentUser && currentUser.id === userId) {
+            setCurrentUser(prevUser => prevUser ? updateUser(prevUser) : null);
+        }
+    };
+
     const renderView = () => {
         if (currentUser && !availableViews.includes(activeView)) {
              return <div className="p-8 text-center text-red-500">Access denied. You do not have permission to view the '{activeView}' page.</div>;
@@ -145,9 +196,25 @@ const App: React.FC = () => {
             case 'Lead Generation': return <LeadGeneration onAddProspects={handleAddProspects} prospects={prospects} />;
             case 'Products': return <Products products={products} setProducts={setProducts} />;
             case 'Analytics': return <Analytics />;
-            case 'Live Call': return <LiveCall prospects={prospects} />;
+            case 'Live Call': return <LiveCall prospects={prospects} setProspects={setProspects} />;
             case 'Integrations': return <Integrations connectedIntegrations={connectedIntegrations} onToggleIntegration={handleToggleIntegration} />;
-            case 'Settings': return <Settings users={users} setUsers={setUsers} aiProvider={aiProvider} setAiProvider={handleSetAiProvider} currentUser={currentUser!} onInviteUser={handleInviteUser} apiKeys={apiKeys} setApiKeys={handleSetApiKeys} rolePermissions={rolePermissions} setRolePermissions={handleSetRolePermissions} />;
+            case 'Settings': return <Settings users={users} setUsers={setUsers} aiProvider={aiProvider} setAiProvider={handleSetAiProvider} currentUser={currentUser!} onInviteUser={handleInviteUser} apiKeys={apiKeys} setApiKeys={handleSetApiKeys} rolePermissions={rolePermissions} setRolePermissions={handleSetRolePermissions} onLogout={handleLogout} certificateSettings={certificateSettings} setCertificateSettings={handleSetCertificateSettings} />;
+            case 'Playbooks': return <Playbooks />;
+            case 'Training Center': return <TrainingCenter 
+                onSelectPlaybook={handleSelectPlaybook} 
+                currentUser={currentUser!} 
+                trainingModules={trainingModules} 
+                setTrainingModules={setTrainingModules} 
+                onUpdateTrainingProgress={handleUpdateUserTrainingProgress} 
+                users={users}
+                setUsers={setUsers}
+                discussionThreads={discussionThreads}
+                setDiscussionThreads={setDiscussionThreads}
+                studyGroups={studyGroups}
+                setStudyGroups={setStudyGroups}
+                certificateSettings={certificateSettings}
+            />;
+            case 'AI Generator': return <AIGenerator />;
             default: return <Dashboard />;
         }
     };
@@ -157,15 +224,17 @@ const App: React.FC = () => {
     }
 
     return (
-        <Layout 
-            activeView={activeView} 
-            setActiveView={setActiveView} 
-            currentUser={currentUser} 
-            onLogout={handleLogout}
-            availableViews={availableViews}
-        >
-            {renderView()}
-        </Layout>
+        <PermissionContext.Provider value={{ user: currentUser, permissions: rolePermissions }}>
+            <Layout 
+                activeView={activeView} 
+                setActiveView={setActiveView} 
+                currentUser={currentUser} 
+                onLogout={handleLogout}
+                availableViews={availableViews}
+            >
+                {renderView()}
+            </Layout>
+        </PermissionContext.Provider>
     );
 };
 

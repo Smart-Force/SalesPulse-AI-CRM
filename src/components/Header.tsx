@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { 
-    LayoutDashboard, Wand2, Inbox, Users, Target, Telescope, Package, BarChart2, Phone, Zap, Settings, Rocket, Sun, Moon, GitFork, BookOpen
+    LayoutDashboard, Wand2, Inbox, Users, Target, Telescope, Package, BarChart2, Phone, Zap, Settings, Rocket, Sun, Moon, GitFork, BookOpen, GraduationCap
 } from 'lucide-react';
 import { View, User } from '../types';
 import { useHasPermission } from '../contexts/PermissionContext';
@@ -21,6 +21,7 @@ const navItems: { view: View; icon: React.ElementType }[] = [
     { view: 'Workflows', icon: GitFork },
     { view: 'Lead Generation', icon: Telescope },
     { view: 'Playbooks', icon: BookOpen },
+    { view: 'Training Center', icon: GraduationCap },
     { view: 'AI Generator', icon: Wand2 },
     { view: 'Products', icon: Package },
     { view: 'Analytics', icon: BarChart2 },

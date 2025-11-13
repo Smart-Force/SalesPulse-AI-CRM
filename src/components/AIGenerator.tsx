@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Wand2, Loader2, Sparkles, Copy, Check } from 'lucide-react';
 import { generateAdHocContent } from '../services/aiService';
 import { useToasts } from '../contexts/ToastContext';
-import { Skeleton } from './ui/Skeleton';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { usePermissions } from '../contexts/PermissionContext';
 
 const contentTypes = ['Sales Email', 'LinkedIn Post', 'Follow-up Message', 'Objection Response', 'Value Proposition'];

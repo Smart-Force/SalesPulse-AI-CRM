@@ -2,12 +2,19 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { useToasts } from '../../contexts/ToastContext';
 
-export const AccountSettings: React.FC = () => {
+// FIX: Add props for the onLogout function.
+interface AccountSettingsProps {
+    onLogout: () => void;
+}
+
+export const AccountSettings: React.FC<AccountSettingsProps> = ({ onLogout }) => {
     const { addToast } = useToasts();
     
     const handleDeleteAccount = () => {
         if (window.confirm('Are you absolutely sure? This action is permanent and cannot be undone.')) {
             addToast('Workspace deleted (simulation).', 'error');
+            // FIX: Call onLogout after deleting the workspace.
+            onLogout();
         }
     };
 

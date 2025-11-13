@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { User as UserIcon, Lock, Settings as SettingsIcon, Palette, CreditCard, Bell, Users, Bot, Shield } from 'lucide-react';
+import { User as UserIcon, Lock, Settings as SettingsIcon, Palette, CreditCard, Bell, Users, Bot, Shield, Award } from 'lucide-react';
 import { SettingsProfile } from './settings/SettingsProfile';
 import { SettingsSecurity } from './settings/SettingsSecurity';
 import { SettingsTeam } from './settings/SettingsTeam';
 import { SettingsWorkspace } from './settings/WorkspaceSettings';
-// FIX: Import the 'View' type to resolve the 'Cannot find name' error.
-import type { SettingsTab, User, AIProvider, UserRole, ApiKeys, RolePermissions, View } from '../types';
+import { SettingsCertificates } from './settings/SettingsCertificates';
+import type { SettingsTab, User, AIProvider, UserRole, ApiKeys, RolePermissions, View, CertificateSettings } from '../types';
 import { useHasPermission } from '../contexts/PermissionContext';
 
 interface SettingsProps {
@@ -19,6 +19,8 @@ interface SettingsProps {
     setApiKeys: (keys: ApiKeys) => void;
     rolePermissions: RolePermissions;
     setRolePermissions: (permissions: RolePermissions) => void;
+    certificateSettings: CertificateSettings;
+    setCertificateSettings: (settings: CertificateSettings) => void;
     onLogout: () => void;
 }
 
@@ -31,6 +33,7 @@ const workspaceSettingsTabs: { id: SettingsTab; name: string; icon: React.Elemen
   { id: 'team', name: 'Team & Roles', icon: Users, requiredPermission: 'Settings - Team' },
   { id: 'billing', name: 'Billing', icon: CreditCard, requiredPermission: 'Settings - Billing' },
   { id: 'ai-provider', name: 'AI Provider', icon: Bot, requiredPermission: 'Settings - AI Provider' },
+  { id: 'certificates', name: 'Certificates', icon: Award, requiredPermission: 'Settings - Certificates' },
 ];
 
 type NavButtonProps = {
@@ -66,7 +69,6 @@ export const Settings: React.FC<SettingsProps> = (props) => {
         return <SettingsTeam {...props} />;
       case 'billing':
       case 'ai-provider':
-        // FIX: Explicitly map props to match the 'WorkspaceSettingsProps' interface.
         return <SettingsWorkspace 
             currentProvider={props.aiProvider}
             onProviderChange={props.setAiProvider}
@@ -75,6 +77,8 @@ export const Settings: React.FC<SettingsProps> = (props) => {
             setApiKeys={props.setApiKeys}
             onLogout={props.onLogout}
         />;
+      case 'certificates':
+        return <SettingsCertificates settings={props.certificateSettings} onSave={props.setCertificateSettings} />;
       default:
         return <SettingsProfile />;
     }
@@ -84,11 +88,13 @@ export const Settings: React.FC<SettingsProps> = (props) => {
     const hasTeamAccess = useHasPermission('Settings - Team');
     const hasBillingAccess = useHasPermission('Settings - Billing');
     const hasAIAccess = useHasPermission('Settings - AI Provider');
+    const hasCertificatesAccess = useHasPermission('Settings - Certificates');
     
     const visibleTabs = workspaceSettingsTabs.filter(tab => {
         if (tab.id === 'team') return hasTeamAccess;
         if (tab.id === 'billing') return hasBillingAccess;
         if (tab.id === 'ai-provider') return hasAIAccess;
+        if (tab.id === 'certificates') return hasCertificatesAccess;
         return true;
     });
 

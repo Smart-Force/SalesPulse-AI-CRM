@@ -8,6 +8,7 @@ export const allViews: View[] = [
     'Workflows',
     'Lead Generation', 
     'Playbooks',
+    'Training Center',
     'AI Generator',
     'Products', 
     'Analytics', 
@@ -15,7 +16,7 @@ export const allViews: View[] = [
     'Integrations', 
     'Settings',
     // Granular settings views
-    'Settings - Team', 'Settings - AI Provider', 'Settings - Roles', 'Settings - Billing'
+    'Settings - Team', 'Settings - AI Provider', 'Settings - Roles', 'Settings - Billing', 'Settings - Certificates'
 ];
 
 const fullAccess: PermissionAction = { view: true, create: true, edit: true, delete: true };
@@ -30,7 +31,7 @@ const createPermissionsFromViews = (
     for (const view of allViews) {
         if (views.includes(view)) {
             // Apply read-only for specific views, otherwise use the default
-            const isReadOnlyView = ['Dashboard', 'Analytics', 'Playbooks'].includes(view);
+            const isReadOnlyView = ['Dashboard', 'Analytics', 'Playbooks', 'Training Center'].includes(view);
             permissions[view] = isReadOnlyView ? readOnly : { ...fullAccess, ...defaultAccess };
         } else {
             permissions[view] = noAccess;
@@ -56,9 +57,11 @@ export const initialRolePermissions: RolePermissions = {
         'Live Call', 
         'Integrations', 
         'Playbooks',
+        'Training Center',
         'AI Generator',
         'Settings',
         'Settings - Team', // Manager can view team by default
+        'Settings - Certificates',
     ]),
     'Member': createPermissionsFromViews(
         [
@@ -69,6 +72,7 @@ export const initialRolePermissions: RolePermissions = {
             'Workflows',
             'Live Call',
             'Playbooks',
+            'Training Center',
             'AI Generator',
             'Settings',
         ],

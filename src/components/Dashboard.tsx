@@ -140,7 +140,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ prospects, deals }) => {
                     const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
                     const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
                     return (
-                      <text x={x} y={y} fill="#6b7280" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12}>
+                      <text x={x} y={y} fill={document.documentElement.classList.contains('dark') ? '#94a3b8' : '#6b7280'} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12}>
                         {`${(percent * 100).toFixed(0)}%`}
                       </text>
                     );

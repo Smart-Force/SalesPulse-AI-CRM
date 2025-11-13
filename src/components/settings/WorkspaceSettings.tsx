@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../../../components/ui/Card';
 import type { AIProvider, ApiKeys, User } from '../../types';
 import { BrainCircuit, Beaker, Bot, Eye, EyeOff, Key, Download, AlertTriangle, CreditCard } from 'lucide-react';
 import { useToasts } from '../../contexts/ToastContext';
